@@ -10,121 +10,201 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         .modal-overlay {
-            background-color: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
+            background-color: rgba(30, 41, 59, 0.8); /* Slate 800 com opacidade */
+            backdrop-filter: blur(6px);
         }
         .table-container {
-            height: 600px;
+            flex: 1;
             overflow-y: auto;
-            background: white;
+            background: #e2e8f0; /* Slate 200 */
             position: relative;
         }
         .table-container::-webkit-scrollbar {
             width: 8px;
         }
         .table-container::-webkit-scrollbar-track {
-            background: #f1f1f1;
+            background: #cbd5e1;
         }
         .table-container::-webkit-scrollbar-thumb {
-            background: #888;
+            background: #64748b;
             border-radius: 4px;
         }
         .table-container::-webkit-scrollbar-thumb:hover {
-            background: #555;
+            background: #475569;
+        }
+        .clickable-row {
+            cursor: pointer;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #94a3b8; /* Slate 400 */
+        }
+        .search-container {
+            position: relative;
+            flex: 1;
+            max-width: 600px;
+        }
+        #clearSearch {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #475569;
+            cursor: pointer;
+            display: none;
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+        #clearSearch:hover {
+            color: #1e293b;
+        }
+        /* Footer Fixo */
+        footer {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            background: #cbd5e1; /* Slate 300 */
+            border-top: 1px solid #94a3b8;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+            z-index: 20;
+        }
+        /* Efeito de listras sutis na tabela */
+        tbody tr:nth-child(even) {
+            background-color: #f1f5f9; /* Slate 100 */
+        }
+        tbody tr:nth-child(odd) {
+            background-color: #f8fafc; /* Slate 50 */
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen font-sans">
+<body class="font-sans">
 
     <!-- Header -->
-    <header class="bg-white shadow-md p-4 flex justify-between items-center fixed top-0 w-full z-20 border-b border-gray-200">
-        <h1 class="text-xl font-bold text-blue-600">Acesso ao Estacionamento</h1>
-        <button id="loginBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-all font-semibold">
+    <header class="bg-slate-100 shadow-md p-4 flex justify-between items-center z-20 border-b border-slate-300">
+        <h1 class="text-xl font-bold text-slate-800">Acesso ao Estacionamento</h1>
+        <button id="loginBtn" class="bg-slate-700 hover:bg-slate-800 text-white px-6 py-2 rounded-lg transition-all font-semibold shadow-md">
             Admin
         </button>
     </header>
 
     <!-- Conteúdo Principal -->
-    <main class="pt-24 px-6 max-w-6xl mx-auto pb-12">
-        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
-                <div class="flex items-center gap-2">
-                    <span class="text-gray-600 font-medium">Registos na lista:</span>
-                    <span id="resultCounter" class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">0</span>
-                </div>
-
-                <div id="uploadSection" class="hidden flex gap-3">
-                    <button id="clearDataBtn" onclick="showConfirmDeleteModal()" class="bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-all border border-red-200 font-medium">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        Apagar Tudo
-                    </button>
-                    <button onclick="openUploadModal()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm transition-all font-medium">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                        </svg>
-                        Importar Novo Excel
-                    </button>
-                </div>
+    <main class="flex-1 flex flex-col overflow-hidden bg-slate-300">
+        
+        <!-- Barra de Pesquisa e Ações (Topo) -->
+        <div class="bg-slate-200 border-b border-slate-400 p-4 flex flex-wrap justify-center items-center gap-4">
+            <div class="search-container">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Pesquisar por nome ou CPF..." 
+                    class="w-full pl-4 pr-10 py-3 border border-slate-400 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 outline-none transition-all shadow-inner text-lg bg-slate-50 text-slate-900 placeholder-slate-400"
+                >
+                <span id="clearSearch" title="Limpar pesquisa">&times;</span>
             </div>
 
-            <div class="table-container border border-gray-200 rounded-lg">
-                <table class="w-full text-left border-collapse">
-                    <thead class="sticky top-0 z-10 bg-gray-50 shadow-sm">
-                        <tr class="border-b border-gray-200">
-                            <th class="p-4 font-bold text-gray-700 uppercase text-xs tracking-wider bg-gray-50">ID / Cartão</th>
-                            <th class="p-4 font-bold text-gray-700 uppercase text-xs tracking-wider bg-gray-50">Nome do Utente</th>
-                            <th class="p-4 font-bold text-gray-700 uppercase text-xs tracking-wider bg-gray-50">Departamento / Info</th>
-                        </tr>
-                    </thead>
-                    <tbody id="dataTableBody" class="divide-y divide-gray-100">
-                    </tbody>
-                </table>
+            <div id="uploadSection" class="hidden flex gap-3">
+                <button id="clearDataBtn" onclick="showConfirmDeleteModal()" class="bg-slate-100 hover:bg-red-100 text-red-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-all border border-red-300 font-medium text-sm shadow-sm">
+                    Apagar Tudo
+                </button>
+                <button onclick="openUploadModal()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-md transition-all font-medium text-sm border border-slate-700">
+                    Novo Excel
+                </button>
             </div>
+        </div>
+
+        <!-- Tabela -->
+        <div class="table-container">
+            <table class="w-full text-left border-collapse">
+                <thead class="sticky top-0 z-10 bg-slate-300 shadow-sm border-b border-slate-400">
+                    <tr>
+                        <!-- Alterado de "Nome do Utente" para "Nome" -->
+                        <th class="p-4 font-bold text-slate-800 uppercase text-xs tracking-wider">Nome</th>
+                    </tr>
+                </thead>
+                <tbody id="dataTableBody" class="divide-y divide-slate-300">
+                </tbody>
+            </table>
         </div>
     </main>
 
+    <!-- Footer com Informações de Estado -->
+    <footer>
+        <div class="flex items-center gap-2 text-slate-600 italic text-sm">
+            <span class="font-bold not-italic">Atualizado em:</span>
+            <span id="lastUpdateDate">Carregando...</span>
+        </div>
+        <div class="flex items-center gap-1 text-slate-700 font-bold">
+            <span class="uppercase tracking-wider text-xs">Total:</span>
+            <span id="resultCounter" class="text-lg">0</span>
+        </div>
+    </footer>
+
     <!-- Modais -->
+    <div id="detailsModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center z-[70] p-4">
+        <div class="bg-slate-100 p-8 rounded-2xl shadow-2xl w-full max-w-md relative border border-slate-300">
+            <h3 class="text-xl font-bold mb-6 text-slate-900 border-b border-slate-300 pb-2">Detalhes do Acesso</h3>
+            <div class="space-y-6">
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">CPF / ID</label>
+                    <p id="detId" class="text-lg font-mono text-slate-900 bg-slate-200 p-2 rounded border border-slate-300 mt-1"></p>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Nome</label>
+                    <p id="detNome" class="text-xl font-bold text-slate-900 mt-1"></p>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Departamento</label>
+                    <p id="detInfo" class="text-lg text-slate-800 mt-1"></p>
+                </div>
+            </div>
+            <button onclick="closeModal('detailsModal')" class="w-full mt-8 bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl shadow-lg">Fechar</button>
+        </div>
+    </div>
+
     <div id="loginModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center z-50 p-4">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md relative">
-            <button onclick="closeModal('loginModal')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-            <h3 class="text-2xl font-bold mb-6 text-center text-gray-800">Acesso Administrativo</h3>
+        <div class="bg-slate-200 p-8 rounded-2xl shadow-2xl w-full max-w-md relative border border-slate-400">
+            <button onclick="closeModal('loginModal')" class="absolute top-4 right-4 text-slate-500 text-2xl">&times;</button>
+            <h3 class="text-2xl font-bold mb-6 text-center text-slate-800">Acesso Administrativo</h3>
             <div class="space-y-4">
-                <input type="email" id="email" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="Utilizador">
-                <input type="password" id="password" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="Palavra-passe">
-                <button onclick="handleLogin()" class="w-full bg-blue-600 text-white p-3 rounded-lg font-bold">Entrar</button>
+                <input type="email" id="email" class="w-full p-3 border border-slate-400 rounded-lg outline-none bg-slate-50" placeholder="Utilizador">
+                <input type="password" id="password" class="w-full p-3 border border-slate-400 rounded-lg outline-none bg-slate-50" placeholder="Palavra-passe">
+                <button onclick="handleLogin()" class="w-full bg-slate-800 text-white p-3 rounded-lg font-bold shadow-md">Entrar</button>
             </div>
         </div>
     </div>
 
     <div id="uploadModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center z-50 p-4">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md relative">
-            <button onclick="closeModal('uploadModal')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-            <h3 class="text-2xl font-bold mb-4 text-center">Importar Excel</h3>
-            <input type="file" id="excelInput" accept=".xlsx, .xls" class="mb-4 block w-full">
-            <button onclick="processExcel()" id="processBtn" class="w-full bg-green-600 text-white p-3 rounded-lg font-bold disabled:bg-gray-300" disabled>Iniciar</button>
+        <div class="bg-slate-200 p-8 rounded-2xl shadow-2xl w-full max-w-md relative border border-slate-400">
+            <button onclick="closeModal('uploadModal')" class="absolute top-4 right-4 text-slate-500 text-2xl">&times;</button>
+            <h3 class="text-2xl font-bold mb-4 text-center text-slate-800">Importar Dados</h3>
+            <p class="text-sm text-slate-600 mb-4 text-center italic">A importação substituirá todos os dados atuais.</p>
+            <input type="file" id="excelInput" accept=".xlsx, .xls" class="mb-4 block w-full text-slate-700 bg-slate-50 p-2 rounded border border-slate-300">
+            <button onclick="processExcel()" id="processBtn" class="w-full bg-slate-700 text-white p-3 rounded-lg font-bold disabled:bg-slate-400 shadow-md" disabled>Iniciar Importação</button>
         </div>
     </div>
 
-    <!-- MODAL DE CONFIRMAÇÃO DE EXCLUSÃO -->
     <div id="confirmDeleteModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center z-[60] p-4">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm text-center">
-            <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div class="bg-slate-200 p-8 rounded-2xl shadow-2xl w-full max-sm text-center border border-slate-400">
+            <div class="w-16 h-16 bg-slate-300 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-400">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
             </div>
-            <h3 class="text-xl font-bold mb-2 text-gray-800">Tens a certeza?</h3>
-            <p class="text-gray-600 mb-6">Esta ação irá apagar todos os dados permanentemente.</p>
+            <h3 class="text-xl font-bold mb-2 text-slate-900">Tens a certeza?</h3>
+            <p class="text-slate-700 mb-6">Esta ação apagará toda a base de dados permanentemente.</p>
             <div class="flex gap-3">
-                <button onclick="closeModal('confirmDeleteModal')" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium">Cancelar</button>
-                <button onclick="clearDatabase()" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Apagar Tudo</button>
+                <button onclick="closeModal('confirmDeleteModal')" class="flex-1 px-4 py-2 border border-slate-400 text-slate-800 rounded-lg hover:bg-slate-300 font-medium transition-colors">Cancelar</button>
+                <button id="confirmClearBtn" onclick="clearDatabase()" class="flex-1 px-4 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 font-medium shadow-md">Sim, Apagar Tudo</button>
             </div>
         </div>
     </div>
 
-    <div id="toast" class="fixed bottom-6 right-6 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl transform translate-y-32 transition-transform duration-300 z-50">
+    <div id="toast" class="fixed bottom-20 right-6 bg-slate-900 text-white px-6 py-4 rounded-xl shadow-2xl transform translate-y-64 transition-transform duration-300 z-50 border border-slate-700">
         <span id="toastMsg"></span>
     </div>
 
@@ -133,17 +213,37 @@
         const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6dHJ5Z2pjempxZXFxbGRpcXhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNDgyMzIsImV4cCI6MjA3MzYyNDIzMn0.s7QiJWo6SPZRmN1bW1vPyhEis0xO1voNh0GFWPrTLtU';
         
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
+        
+        let allData = [];
         let currentUser = null;
 
         const loginBtn = document.getElementById('loginBtn');
         const uploadSection = document.getElementById('uploadSection');
         const dataTableBody = document.getElementById('dataTableBody');
         const resultCounter = document.getElementById('resultCounter');
-        const clearDataBtn = document.getElementById('clearDataBtn');
+        const lastUpdateSpan = document.getElementById('lastUpdateDate');
+        const searchInput = document.getElementById('searchInput');
+        const clearSearch = document.getElementById('clearSearch');
         const excelInput = document.getElementById('excelInput');
         const processBtn = document.getElementById('processBtn');
 
-        window.addEventListener('DOMContentLoaded', fetchData);
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchData();
+            fetchLastUpdate();
+        });
+
+        searchInput.addEventListener('input', () => {
+            const term = searchInput.value;
+            clearSearch.style.display = term ? 'block' : 'none';
+            filterData(term);
+        });
+
+        clearSearch.addEventListener('click', () => {
+            searchInput.value = '';
+            clearSearch.style.display = 'none';
+            filterData('');
+            searchInput.focus();
+        });
 
         loginBtn.addEventListener('click', () => {
             if (!currentUser) document.getElementById('loginModal').classList.remove('hidden');
@@ -159,104 +259,146 @@
         function showToast(msg) {
             const toast = document.getElementById('toast');
             document.getElementById('toastMsg').textContent = msg;
-            toast.classList.remove('translate-y-32');
-            setTimeout(() => toast.classList.add('translate-y-32'), 4000);
+            toast.classList.remove('translate-y-64');
+            setTimeout(() => toast.classList.add('translate-y-64'), 4000);
+        }
+
+        async function fetchLastUpdate() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('sistema_config')
+                    .select('valor')
+                    .eq('chave', 'ultima_atualizacao')
+                    .single();
+                
+                if (data) lastUpdateSpan.textContent = data.valor;
+                else lastUpdateSpan.textContent = 'Nenhuma importação realizada';
+            } catch (e) {
+                lastUpdateSpan.textContent = 'Indisponível';
+            }
+        }
+
+        async function setLastUpdateDate() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('pt-BR') + ' às ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            
+            try {
+                await supabaseClient
+                    .from('sistema_config')
+                    .upsert({ chave: 'ultima_atualizacao', valor: dateStr });
+                
+                lastUpdateSpan.textContent = dateStr;
+            } catch (e) {
+                console.error("Erro ao salvar data:", e);
+            }
         }
 
         async function handleLogin() {
             currentUser = { active: true };
-            loginBtn.textContent = 'Sair';
+            loginBtn.textContent = 'Sair do Modo Admin';
+            loginBtn.classList.replace('bg-slate-700', 'bg-blue-600');
             uploadSection.classList.remove('hidden');
             closeModal('loginModal');
-            showToast("Modo Admin Ativo");
+            showToast("Modo Admin Ativado");
         }
 
         function handleLogout() {
             currentUser = null;
             loginBtn.textContent = 'Admin';
+            loginBtn.classList.replace('bg-blue-600', 'bg-slate-700');
             uploadSection.classList.add('hidden');
-        }
-
-        // FUNÇÃO DE LIMPEZA REPROJETADA
-        async function clearDatabase() {
-            closeModal('confirmDeleteModal');
-            clearDataBtn.disabled = true;
-            clearDataBtn.textContent = "A obter IDs...";
-
-            try {
-                // Passo 1: Listar os IDs
-                const { data: records, error: fetchError } = await supabaseClient
-                    .from('Estacionamento')
-                    .select('coluna_a');
-
-                if (fetchError) throw fetchError;
-                if (!records || records.length === 0) {
-                    showToast("Tabela já está limpa.");
-                    return;
-                }
-
-                const total = records.length;
-                let falhas = 0;
-                let sucessos = 0;
-
-                // Passo 2: Apagar um por um
-                for (let i = 0; i < total; i++) {
-                    clearDataBtn.textContent = `Apagando ${i+1}/${total}...`;
-                    
-                    const { error: delError } = await supabaseClient
-                        .from('Estacionamento')
-                        .delete()
-                        .eq('coluna_a', records[i].coluna_a);
-                    
-                    if (delError) {
-                        console.error("Erro no ID", records[i].coluna_a, delError);
-                        falhas++;
-                    } else {
-                        sucessos++;
-                    }
-                }
-
-                if (sucessos > 0) {
-                    showToast(`Sucesso: ${sucessos} registos apagados.`);
-                }
-                
-                if (falhas > 0) {
-                    showToast(`Atenção: ${falhas} registos falharam. Verifique o RLS no Supabase.`);
-                }
-
-                fetchData();
-            } catch (err) {
-                console.error("Erro fatal:", err);
-                showToast("Erro ao processar limpeza.");
-            } finally {
-                clearDataBtn.disabled = false;
-                clearDataBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg> Apagar Tudo`;
-            }
         }
 
         async function fetchData() {
             try {
                 const { data, error } = await supabaseClient.from('Estacionamento').select('*');
                 if (error) throw error;
-                renderTable(data);
+                allData = data || [];
+                renderTable(allData);
             } catch (err) {
-                dataTableBody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-red-500">Erro ao carregar dados.</td></tr>`;
+                dataTableBody.innerHTML = `<tr><td class="p-4 text-center text-red-700 font-bold">Erro ao carregar os dados.</td></tr>`;
             }
+        }
+
+        function normalizeString(str) {
+            if (!str) return "";
+            return str.toString().toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "");
+        }
+
+        function filterData(term) {
+            if (!term.trim()) {
+                renderTable(allData);
+                return;
+            }
+            const normalizedTerm = normalizeString(term);
+            const parts = normalizedTerm.split(/\s+/).filter(p => p !== "");
+            const filtered = allData.filter(item => {
+                const searchStr = normalizeString(`${item.coluna_b} ${item.coluna_a}`);
+                return parts.every(part => searchStr.includes(part));
+            });
+            renderTable(filtered);
         }
 
         function renderTable(data) {
             dataTableBody.innerHTML = '';
             resultCounter.textContent = data ? data.length : 0;
             if (!data || data.length === 0) {
-                dataTableBody.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-gray-400">Tabela vazia</td></tr>';
+                dataTableBody.innerHTML = '<tr><td class="p-12 text-center text-slate-600 font-bold">Nenhum registo encontrado.</td></tr>';
                 return;
             }
             data.forEach(item => {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-blue-50 border-b transition-colors";
-                tr.innerHTML = `<td class="p-4 font-mono text-sm">${item.coluna_a || ''}</td><td class="p-4 font-bold text-gray-800">${item.coluna_b || ''}</td><td class="p-4 text-gray-600">${item.coluna_d || ''}</td>`;
+                tr.className = "hover:bg-slate-200 transition-colors clickable-row group";
+                tr.innerHTML = `
+                    <td class="p-4 flex justify-between items-center">
+                        <span class="font-bold text-slate-900 text-lg">${item.coluna_b || 'Utente sem Nome'}</span>
+                        <div class="flex items-center gap-2">
+                             <span class="text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity text-sm font-bold bg-slate-300 px-3 py-1 rounded-full uppercase tracking-tighter">Detalhes</span>
+                        </div>
+                    </td>
+                `;
+                tr.onclick = () => showDetails(item);
                 dataTableBody.appendChild(tr);
             });
+        }
+
+        function showDetails(item) {
+            document.getElementById('detId').textContent = item.coluna_a || '---';
+            document.getElementById('detNome').textContent = item.coluna_b || '---';
+            document.getElementById('detInfo').textContent = item.coluna_d || 'Não especificado';
+            document.getElementById('detailsModal').classList.remove('hidden');
+        }
+
+        async function clearDatabase(silent = false) {
+            const confirmBtn = document.getElementById('confirmClearBtn');
+            if (!silent) {
+                confirmBtn.disabled = true;
+                confirmBtn.textContent = "A apagar...";
+            }
+            try {
+                const { error } = await supabaseClient
+                    .from('Estacionamento')
+                    .delete()
+                    .neq('coluna_a', 'PROTECTED_ROW_ID');
+                if (error) throw error;
+                if (!silent) {
+                    showToast("Base de dados limpa com sucesso.");
+                    closeModal('confirmDeleteModal');
+                    fetchData();
+                }
+                return true;
+            } catch (err) {
+                console.error("Erro ao apagar:", err);
+                if (!silent) showToast("Erro técnico ao apagar dados.");
+                return false;
+            } finally {
+                if (!silent) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = "Sim, Apagar Tudo";
+                }
+            }
         }
 
         async function processExcel() {
@@ -266,27 +408,28 @@
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
                 const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, range: 2 });
-                
                 const formatted = rows.map(r => ({
                     coluna_a: r[0] ? String(r[0]).trim() : null,
                     coluna_b: `${r[1] || r[2] ? (r[1] || '') + ' ' + (r[2] || '') : 'Utente s/ Nome'}`.trim(),
                     coluna_c: "",
                     coluna_d: r[3] ? String(r[3]).trim() : "Geral"
-                })).filter(i => i.coluna_a && i.coluna_a !== "null" && i.coluna_a !== "undefined");
-
+                })).filter(i => i.coluna_a);
+                
                 if (formatted.length > 0) {
-                    processBtn.textContent = "A importar...";
+                    processBtn.textContent = "A processar...";
                     processBtn.disabled = true;
-                    
-                    const { error } = await supabaseClient.from('Estacionamento').insert(formatted);
-                    
-                    if (error) showToast("Erro ao importar: " + error.message);
-                    else {
-                        showToast("Dados importados com sucesso.");
-                        closeModal('uploadModal');
-                        fetchData();
+                    const clearOk = await clearDatabase(true);
+                    if (clearOk) {
+                        const { error } = await supabaseClient.from('Estacionamento').insert(formatted);
+                        if (error) showToast("Erro na inserção: " + error.message);
+                        else {
+                            await setLastUpdateDate();
+                            showToast(`${formatted.length} registos importados.`);
+                            closeModal('uploadModal');
+                            fetchData();
+                        }
                     }
-                    processBtn.textContent = "Iniciar";
+                    processBtn.textContent = "Iniciar Importação";
                     processBtn.disabled = false;
                 }
             };
