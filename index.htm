@@ -62,17 +62,11 @@
             color: #000;
         }
         
-        /* Fita Zebrada Reduzida */
-        .zebra-pattern {
-            background: repeating-linear-gradient(
-                45deg,
-                #facc15,
-                #facc15 15px,
-                #1e293b 15px,
-                #1e293b 30px
-            );
-            padding: 12px;
-            box-shadow: inset 0 4px 8px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.1);
+        /* Cabeçalho de Busca Cinza Escuro */
+        .search-header-dark {
+            background-color: #1e293b; /* Cinza bem escuro (Slate 900) */
+            padding: 16px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), 0 4px 6px rgba(0,0,0,0.1);
         }
 
         /* Sub-header de status */
@@ -132,24 +126,25 @@
     <!-- Conteúdo Principal -->
     <main class="flex-1 flex flex-col overflow-hidden bg-slate-500">
         
-        <div class="zebra-pattern border-b-2 border-slate-950 flex flex-nowrap items-center px-4 md:px-8 gap-3">
+        <!-- Cabeçalho de Busca Cinza Escuro -->
+        <div class="search-header-dark border-b border-slate-950 flex flex-nowrap items-center px-4 md:px-8 gap-3">
             <div class="search-container">
                 <input 
                     type="text" 
                     id="searchInput" 
                     placeholder="Pesquisar por Nome ou CPF..." 
-                    class="w-full pl-3 pr-8 py-2.5 border-2 border-slate-950 rounded-xl focus:border-black outline-none transition-all shadow-xl text-lg bg-white text-slate-950 placeholder-slate-400 font-medium"
+                    class="w-full pl-3 pr-10 py-2.5 border border-slate-800 rounded-xl focus:ring-2 focus:ring-yellow-400 outline-none transition-all shadow-xl text-lg bg-white text-slate-950 placeholder-slate-400 font-medium"
                 >
-                <span id="clearSearch" title="Limpar pesquisa">&times;</span>
+                <span id="clearSearch" title="Limpar pesquisa" class="text-slate-400 hover:text-slate-900">&times;</span>
             </div>
 
             <div id="uploadSection" class="hidden flex gap-2 flex-shrink-0">
-                <button id="clearDataBtn" onclick="showConfirmDeleteModal()" class="bg-red-700 hover:bg-red-800 text-white px-3 py-2.5 rounded-xl transition-all border border-red-950 shadow-lg" title="Apagar Tudo">
+                <button id="clearDataBtn" onclick="showConfirmDeleteModal()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2.5 rounded-xl transition-all border border-red-900 shadow-lg" title="Apagar Tudo">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                 </button>
-                <button onclick="openUploadModal()" class="bg-slate-950 hover:bg-black text-yellow-400 px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-lg transition-all border border-slate-800 font-bold text-xs" title="Novo Excel">
+                <button onclick="openUploadModal()" class="bg-slate-800 hover:bg-black text-yellow-400 px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-lg transition-all border border-slate-700 font-bold text-xs" title="Novo Excel">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                     </svg>
@@ -173,7 +168,8 @@
             <div class="space-y-4">
                 <div>
                     <label class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Documento / ID</label>
-                    <p id="detId" class="text-lg font-mono text-white bg-slate-900 p-2 rounded-lg border border-slate-700 mt-1 shadow-inner"></p>
+                    <!-- Removido o fundo preto e deixado texto simples -->
+                    <p id="detId" class="text-lg font-mono text-slate-800 mt-1 font-bold"></p>
                 </div>
                 <div>
                     <label class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Nome Completo</label>
