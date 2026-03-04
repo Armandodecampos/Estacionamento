@@ -3,34 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Estacionamento</title>
+    <title>Acesso: Estacionamento</title>
     <!-- Scripts Externos -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         .modal-overlay {
-            background-color: rgba(30, 41, 59, 0.8); /* Slate 800 com opacidade */
-            backdrop-filter: blur(6px);
+            background-color: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(8px);
         }
         .table-container {
             flex: 1;
             overflow-y: auto;
-            background: #e2e8f0; /* Slate 200 */
+            background: #cbd5e1;
             position: relative;
         }
         .table-container::-webkit-scrollbar {
-            width: 8px;
+            width: 10px;
         }
         .table-container::-webkit-scrollbar-track {
-            background: #cbd5e1;
+            background: #94a3b8;
         }
         .table-container::-webkit-scrollbar-thumb {
-            background: #64748b;
-            border-radius: 4px;
+            background: #334155;
+            border-radius: 5px;
         }
         .table-container::-webkit-scrollbar-thumb:hover {
-            background: #475569;
+            background: #1e293b;
         }
         .clickable-row {
             cursor: pointer;
@@ -40,169 +40,207 @@
             flex-direction: column;
             height: 100vh;
             overflow: hidden;
-            background-color: #94a3b8; /* Slate 400 */
+            background-color: #475569;
         }
         .search-container {
             position: relative;
             flex: 1;
-            max-width: 600px;
+            width: 100%;
         }
         #clearSearch {
             position: absolute;
             right: 12px;
             top: 50%;
             transform: translateY(-50%);
-            color: #475569;
+            color: #1e293b;
             cursor: pointer;
             display: none;
             font-size: 1.5rem;
             line-height: 1;
         }
         #clearSearch:hover {
-            color: #1e293b;
+            color: #000;
         }
+        
+        /* Fita Zebrada */
+        .zebra-pattern {
+            background: repeating-linear-gradient(
+                45deg,
+                #facc15,
+                #facc15 25px,
+                #1e293b 25px,
+                #1e293b 50px
+            );
+            padding: 24px;
+            box-shadow: inset 0 6px 10px rgba(0,0,0,0.4), 0 4px 6px rgba(0,0,0,0.1);
+        }
+
         /* Sub-header de status */
         .status-bar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0.5rem 2rem;
-            background: #cbd5e1; /* Slate 300 */
-            border-bottom: 1px solid #94a3b8;
+            padding: 0.6rem 2rem;
+            background: #94a3b8;
+            border-bottom: 2px solid #334155;
             z-index: 10;
         }
-        /* Efeito de listras sutis na tabela */
+        
+        /* Listras da tabela */
         tbody tr:nth-child(even) {
-            background-color: #f1f5f9; /* Slate 100 */
+            background-color: #e2e8f0;
         }
         tbody tr:nth-child(odd) {
-            background-color: #f8fafc; /* Slate 50 */
+            background-color: #f1f5f9;
+        }
+        tbody tr:hover {
+            background-color: #facc15 !important;
         }
     </style>
 </head>
-<body class="font-sans">
+<body class="font-sans font-normal">
 
     <!-- Header -->
-    <header class="bg-slate-100 shadow-md p-4 flex justify-between items-center z-20 border-b border-slate-300">
-        <h1 class="text-xl font-bold text-slate-800">Acesso ao Estacionamento</h1>
-        <button id="loginBtn" class="bg-slate-700 hover:bg-slate-800 text-white px-6 py-2 rounded-lg transition-all font-semibold shadow-md">
+    <header class="bg-slate-200 shadow-lg p-4 flex justify-between items-center gap-4 z-20 border-b-2 border-slate-400">
+        <div class="flex items-center gap-3 max-w-[75%]">
+            <div class="flex-shrink-0 bg-slate-900 p-2 rounded-lg shadow-inner">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-400" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+                </svg>
+            </div>
+            <h1 class="text-xl text-slate-900 leading-tight break-words uppercase tracking-tight font-medium">
+                Acesso: Estacionamento
+            </h1>
+        </div>
+        <button id="loginBtn" class="bg-slate-900 hover:bg-black text-white px-5 py-2 rounded-lg transition-all shadow-lg whitespace-nowrap border border-slate-700 font-medium">
             Admin
         </button>
     </header>
 
-    <!-- Barra de Estado (Movida para aqui) -->
+    <!-- Barra de Estado -->
     <div class="status-bar">
-        <div class="flex items-center gap-2 text-slate-600 italic text-sm">
-            <span class="font-bold not-italic">Atualizado em:</span>
-            <span id="lastUpdateDate">Carregando...</span>
+        <div class="flex items-center gap-2 text-slate-900 italic text-sm font-normal">
+            <span class="not-italic font-medium">Última Atualização:</span>
+            <span id="lastUpdateDate">Sincronizando...</span>
         </div>
-        <div class="flex items-center gap-1 text-slate-700 font-bold">
-            <span class="uppercase tracking-wider text-xs">Total:</span>
-            <span id="resultCounter" class="text-lg">0</span>
+        <div class="flex items-center gap-2 text-slate-900">
+            <span class="uppercase tracking-widest text-xs font-medium">Total de Registos:</span>
+            <span id="resultCounter" class="text-xl bg-slate-900 text-yellow-400 px-3 py-0.5 rounded-md shadow-md font-medium">0</span>
         </div>
     </div>
 
     <!-- Conteúdo Principal -->
-    <main class="flex-1 flex flex-col overflow-hidden bg-slate-300">
+    <main class="flex-1 flex flex-col overflow-hidden bg-slate-500">
         
-        <!-- Barra de Pesquisa e Ações (Topo) -->
-        <div class="bg-slate-200 border-b border-slate-400 p-4 flex flex-wrap justify-center items-center gap-4">
+        <div class="zebra-pattern border-b-4 border-slate-950 flex flex-nowrap items-center px-4 md:px-12 gap-4">
             <div class="search-container">
                 <input 
                     type="text" 
                     id="searchInput" 
                     placeholder="Pesquisar por nome ou CPF..." 
-                    class="w-full pl-4 pr-10 py-3 border border-slate-400 rounded-xl focus:ring-2 focus:ring-slate-500 focus:border-slate-500 outline-none transition-all shadow-inner text-lg bg-slate-50 text-slate-900 placeholder-slate-400"
+                    class="w-full pl-4 pr-10 py-4 border-4 border-slate-950 rounded-2xl focus:border-black outline-none transition-all shadow-2xl text-xl bg-white text-slate-950 placeholder-slate-500 font-medium"
                 >
                 <span id="clearSearch" title="Limpar pesquisa">&times;</span>
             </div>
 
-            <div id="uploadSection" class="hidden flex gap-3">
-                <button id="clearDataBtn" onclick="showConfirmDeleteModal()" class="bg-slate-100 hover:bg-red-100 text-red-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-all border border-red-300 font-medium text-sm shadow-sm">
-                    Apagar Tudo
+            <div id="uploadSection" class="hidden flex gap-3 flex-shrink-0">
+                <button id="clearDataBtn" onclick="showConfirmDeleteModal()" class="bg-red-700 hover:bg-red-800 text-white px-4 py-4 rounded-2xl flex items-center justify-center transition-all border-2 border-red-950 shadow-xl" title="Apagar Tudo">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
                 </button>
-                <button onclick="openUploadModal()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-md transition-all font-medium text-sm border border-slate-700">
-                    Novo Excel
+                <button onclick="openUploadModal()" class="bg-slate-950 hover:bg-black text-yellow-400 px-6 py-4 rounded-2xl flex items-center gap-3 shadow-xl transition-all border-2 border-slate-800 font-medium" title="Novo Excel">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    <span class="hidden sm:inline uppercase">Importar</span>
                 </button>
             </div>
         </div>
 
-        <!-- Tabela -->
         <div class="table-container">
             <table class="w-full text-left border-collapse">
-                <thead class="sticky top-0 z-10 bg-slate-300 shadow-sm border-b border-slate-400">
-                    <tr>
-                        <th class="p-4 font-bold text-slate-800 uppercase text-xs tracking-wider">Nome</th>
-                    </tr>
-                </thead>
-                <tbody id="dataTableBody" class="divide-y divide-slate-300">
+                <tbody id="dataTableBody" class="divide-y-2 divide-slate-400">
                 </tbody>
             </table>
         </div>
     </main>
 
-    <!-- Modais -->
+    <!-- Detalhes do Acesso -->
     <div id="detailsModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center z-[70] p-4">
-        <div class="bg-slate-100 p-8 rounded-2xl shadow-2xl w-full max-w-md relative border border-slate-300">
-            <h3 class="text-xl font-bold mb-6 text-slate-900 border-b border-slate-300 pb-2">Detalhes do Acesso</h3>
+        <div class="bg-slate-50 p-8 rounded-3xl shadow-2xl w-full max-w-md relative border-4 border-slate-900">
+            <h3 class="text-2xl mb-6 text-slate-900 border-b-4 border-yellow-400 pb-2 uppercase tracking-tight font-medium">Detalhes do Acesso</h3>
             <div class="space-y-6">
                 <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">CPF / ID</label>
-                    <p id="detId" class="text-lg font-mono text-slate-900 bg-slate-200 p-2 rounded border border-slate-300 mt-1"></p>
+                    <label class="text-xs text-slate-500 uppercase tracking-widest font-medium">Documento / ID</label>
+                    <p id="detId" class="text-xl font-mono text-white bg-slate-900 p-3 rounded-xl border-2 border-slate-700 mt-2 shadow-inner font-medium"></p>
                 </div>
                 <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Nome</label>
-                    <p id="detNome" class="text-xl font-bold text-slate-900 mt-1"></p>
+                    <label class="text-xs text-slate-500 uppercase tracking-widest font-medium">Nome Completo</label>
+                    <p id="detNome" class="text-2xl text-slate-900 mt-1 font-medium"></p>
                 </div>
                 <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Departamento</label>
-                    <p id="detInfo" class="text-lg text-slate-800 mt-1"></p>
+                    <label class="text-xs text-slate-500 uppercase tracking-widest font-medium">Departamento / Vínculo</label>
+                    <p id="detInfo" class="text-xl text-slate-700 mt-1 italic font-normal"></p>
                 </div>
             </div>
-            <button onclick="closeModal('detailsModal')" class="w-full mt-8 bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl shadow-lg">Fechar</button>
+            <button onclick="closeModal('detailsModal')" class="w-full mt-10 bg-slate-900 hover:bg-black text-white py-4 rounded-2xl shadow-xl border-b-4 border-slate-700 transition-transform active:scale-95 uppercase font-medium">Fechar Janela</button>
         </div>
     </div>
 
+    <!-- Login Admin -->
     <div id="loginModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center z-50 p-4">
-        <div class="bg-slate-200 p-8 rounded-2xl shadow-2xl w-full max-w-md relative border border-slate-400">
-            <button onclick="closeModal('loginModal')" class="absolute top-4 right-4 text-slate-500 text-2xl">&times;</button>
-            <h3 class="text-2xl font-bold mb-6 text-center text-slate-800">Acesso Administrativo</h3>
-            <div class="space-y-4">
-                <input type="email" id="email" class="w-full p-3 border border-slate-400 rounded-lg outline-none bg-slate-50" placeholder="Utilizador">
-                <input type="password" id="password" class="w-full p-3 border border-slate-400 rounded-lg outline-none bg-slate-50" placeholder="Palavra-passe">
-                <button onclick="handleLogin()" class="w-full bg-slate-800 text-white p-3 rounded-lg font-bold shadow-md">Entrar</button>
+        <div class="bg-slate-100 p-8 rounded-3xl shadow-2xl w-full max-w-md relative border-4 border-slate-900">
+            <button onclick="closeModal('loginModal')" class="absolute top-4 right-4 text-slate-900 text-3xl hover:text-red-600 transition-colors">&times;</button>
+            <h3 class="text-2xl mb-8 text-center text-slate-900 uppercase tracking-tighter font-medium">Acesso Restrito</h3>
+            <div class="space-y-5">
+                <div class="space-y-1">
+                    <label class="text-xs text-slate-600 uppercase ml-1 font-medium">Utilizador</label>
+                    <input type="email" id="email" class="w-full p-4 border-2 border-slate-400 rounded-xl outline-none bg-white focus:border-slate-900 transition-colors font-medium" placeholder="E-mail">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-xs text-slate-600 uppercase ml-1 font-medium">Palavra-passe</label>
+                    <input type="password" id="password" class="w-full p-4 border-2 border-slate-400 rounded-xl outline-none bg-white focus:border-slate-900 transition-colors font-medium" placeholder="••••••••">
+                </div>
+                <button onclick="handleLogin()" class="w-full bg-slate-900 text-yellow-400 p-4 rounded-xl shadow-xl hover:bg-black transition-all mt-4 uppercase font-medium">Autenticar</button>
             </div>
         </div>
     </div>
 
+    <!-- Modal Upload -->
     <div id="uploadModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center z-50 p-4">
-        <div class="bg-slate-200 p-8 rounded-2xl shadow-2xl w-full max-w-md relative border border-slate-400">
-            <button onclick="closeModal('uploadModal')" class="absolute top-4 right-4 text-slate-500 text-2xl">&times;</button>
-            <h3 class="text-2xl font-bold mb-4 text-center text-slate-800">Importar Dados</h3>
-            <p class="text-sm text-slate-600 mb-4 text-center italic">A importação substituirá todos os dados atuais.</p>
-            <input type="file" id="excelInput" accept=".xlsx, .xls" class="mb-4 block w-full text-slate-700 bg-slate-50 p-2 rounded border border-slate-300">
-            <button onclick="processExcel()" id="processBtn" class="w-full bg-slate-700 text-white p-3 rounded-lg font-bold disabled:bg-slate-400 shadow-md" disabled>Iniciar Importação</button>
+        <div class="bg-slate-100 p-8 rounded-3xl shadow-2xl w-full max-w-md relative border-4 border-slate-900">
+            <button onclick="closeModal('uploadModal')" class="absolute top-4 right-4 text-slate-900 text-3xl">&times;</button>
+            <h3 class="text-2xl mb-4 text-center text-slate-900 uppercase font-medium">Importar Planilha</h3>
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 p-4 mb-6">
+                <p class="text-sm text-yellow-800 font-medium">Atenção: Os dados atuais serão substituídos pelos novos.</p>
+            </div>
+            <input type="file" id="excelInput" accept=".xlsx, .xls" class="mb-6 block w-full text-slate-700 bg-white p-3 rounded-xl border-2 border-slate-300 font-mono text-sm">
+            <button onclick="processExcel()" id="processBtn" class="w-full bg-slate-900 text-white p-4 rounded-xl disabled:bg-slate-400 shadow-xl uppercase font-medium">Confirmar Importação</button>
         </div>
     </div>
 
+    <!-- Confirmar Exclusão -->
     <div id="confirmDeleteModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center z-[60] p-4">
-        <div class="bg-slate-200 p-8 rounded-2xl shadow-2xl w-full max-sm text-center border border-slate-400">
-            <div class="w-16 h-16 bg-slate-300 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="bg-slate-50 p-10 rounded-3xl shadow-2xl w-full max-w-sm text-center border-4 border-red-900">
+            <div class="w-20 h-20 bg-red-100 text-red-700 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-red-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
             </div>
-            <h3 class="text-xl font-bold mb-2 text-slate-900">Tens a certeza?</h3>
-            <p class="text-slate-700 mb-6">Esta ação apagará toda a base de dados permanentemente.</p>
-            <div class="flex gap-3">
-                <button onclick="closeModal('confirmDeleteModal')" class="flex-1 px-4 py-2 border border-slate-400 text-slate-800 rounded-lg hover:bg-slate-300 font-medium transition-colors">Cancelar</button>
-                <button id="confirmClearBtn" onclick="clearDatabase()" class="flex-1 px-4 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 font-medium shadow-md">Sim, Apagar Tudo</button>
+            <h3 class="text-2xl mb-3 text-slate-950 uppercase font-medium">Apagar Base de Dados?</h3>
+            <p class="text-slate-800 mb-8">Esta operação é irreversível e removerá todos os acessos do sistema.</p>
+            <div class="flex flex-col gap-3">
+                <button id="confirmClearBtn" onclick="clearDatabase()" class="w-full py-4 bg-red-700 text-white rounded-xl hover:bg-red-800 shadow-lg uppercase transition-all font-medium">Sim, apagar tudo</button>
+                <button onclick="closeModal('confirmDeleteModal')" class="w-full py-3 text-slate-600 rounded-xl hover:text-slate-900 transition-colors font-medium">Manter dados</button>
             </div>
         </div>
     </div>
 
-    <div id="toast" class="fixed bottom-20 right-6 bg-slate-900 text-white px-6 py-4 rounded-xl shadow-2xl transform translate-y-64 transition-transform duration-300 z-50 border border-slate-700">
-        <span id="toastMsg"></span>
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-10 right-1/2 translate-x-1/2 sm:translate-x-0 sm:right-10 bg-slate-950 text-yellow-400 px-8 py-5 rounded-2xl shadow-2xl transform translate-y-64 transition-transform duration-500 z-[100] border-2 border-yellow-400/30 flex items-center gap-4">
+        <div class="w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+        <span id="toastMsg" class="uppercase tracking-wider text-sm font-medium"></span>
     </div>
 
     <script>
@@ -269,7 +307,7 @@
                     .single();
                 
                 if (data) lastUpdateSpan.textContent = data.valor;
-                else lastUpdateSpan.textContent = 'Nenhuma importação realizada';
+                else lastUpdateSpan.textContent = '---';
             } catch (e) {
                 lastUpdateSpan.textContent = 'Indisponível';
             }
@@ -292,18 +330,19 @@
 
         async function handleLogin() {
             currentUser = { active: true };
-            loginBtn.textContent = 'Sair do Modo Admin';
-            loginBtn.classList.replace('bg-slate-700', 'bg-blue-600');
+            loginBtn.textContent = 'Terminar Sessão';
+            loginBtn.classList.replace('bg-slate-900', 'bg-blue-700');
             uploadSection.classList.remove('hidden');
             closeModal('loginModal');
-            showToast("Modo Admin Ativado");
+            showToast("Acesso Admin Concedido");
         }
 
         function handleLogout() {
             currentUser = null;
             loginBtn.textContent = 'Admin';
-            loginBtn.classList.replace('bg-blue-600', 'bg-slate-700');
+            loginBtn.classList.replace('bg-blue-700', 'bg-slate-900');
             uploadSection.classList.add('hidden');
+            showToast("Sessão Terminada");
         }
 
         async function fetchData() {
@@ -313,7 +352,7 @@
                 allData = data || [];
                 renderTable(allData);
             } catch (err) {
-                dataTableBody.innerHTML = `<tr><td class="p-4 text-center text-red-700 font-bold">Erro ao carregar os dados.</td></tr>`;
+                dataTableBody.innerHTML = `<tr><td class="p-10 text-center text-red-900 uppercase font-medium">Erro Crítico ao carregar dados.</td></tr>`;
             }
         }
 
@@ -342,17 +381,17 @@
             dataTableBody.innerHTML = '';
             resultCounter.textContent = data ? data.length : 0;
             if (!data || data.length === 0) {
-                dataTableBody.innerHTML = '<tr><td class="p-12 text-center text-slate-600 font-bold">Nenhum registo encontrado.</td></tr>';
+                dataTableBody.innerHTML = '<tr><td class="p-16 text-center text-slate-800 uppercase tracking-widest bg-slate-200 font-medium">Sem resultados para a pesquisa</td></tr>';
                 return;
             }
             data.forEach(item => {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-200 transition-colors clickable-row group";
+                tr.className = "hover:bg-yellow-400 transition-all clickable-row group border-b border-slate-300";
                 tr.innerHTML = `
-                    <td class="p-4 flex justify-between items-center">
-                        <span class="font-bold text-slate-900 text-lg">${item.coluna_b || 'Utente sem Nome'}</span>
-                        <div class="flex items-center gap-2">
-                             <span class="text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity text-sm font-bold bg-slate-300 px-3 py-1 rounded-full uppercase tracking-tighter">Detalhes</span>
+                    <td class="p-5 flex justify-between items-center">
+                        <span class="text-slate-950 text-xl tracking-tight group-hover:scale-105 transition-transform origin-left font-medium">${item.coluna_b || 'UTENTE NÃO IDENTIFICADO'}</span>
+                        <div class="flex items-center gap-3">
+                             <span class="text-white bg-slate-900 px-4 py-1.5 rounded-lg text-xs uppercase tracking-widest shadow-md opacity-0 group-hover:opacity-100 transition-all font-medium">Ver Ficha</span>
                         </div>
                     </td>
                 `;
@@ -363,8 +402,8 @@
 
         function showDetails(item) {
             document.getElementById('detId').textContent = item.coluna_a || '---';
-            document.getElementById('detNome').textContent = item.coluna_b || '---';
-            document.getElementById('detInfo').textContent = item.coluna_d || 'Não especificado';
+            document.getElementById('detNome').textContent = (item.coluna_b || 'Sem Nome').toUpperCase();
+            document.getElementById('detInfo').textContent = item.coluna_d || 'Setor não informado';
             document.getElementById('detailsModal').classList.remove('hidden');
         }
 
@@ -372,7 +411,7 @@
             const confirmBtn = document.getElementById('confirmClearBtn');
             if (!silent) {
                 confirmBtn.disabled = true;
-                confirmBtn.textContent = "A apagar...";
+                confirmBtn.textContent = "A PROCESSAR...";
             }
             try {
                 const { error } = await supabaseClient
@@ -381,19 +420,19 @@
                     .neq('coluna_a', 'PROTECTED_ROW_ID');
                 if (error) throw error;
                 if (!silent) {
-                    showToast("Base de dados limpa com sucesso.");
+                    showToast("Base de Dados Limpa");
                     closeModal('confirmDeleteModal');
                     fetchData();
                 }
                 return true;
             } catch (err) {
                 console.error("Erro ao apagar:", err);
-                if (!silent) showToast("Erro técnico ao apagar dados.");
+                if (!silent) showToast("Falha técnica na limpeza");
                 return false;
             } finally {
                 if (!silent) {
                     confirmBtn.disabled = false;
-                    confirmBtn.textContent = "Sim, Apagar Tudo";
+                    confirmBtn.textContent = "SIM, APAGAR TUDO";
                 }
             }
         }
@@ -413,20 +452,20 @@
                 })).filter(i => i.coluna_a);
                 
                 if (formatted.length > 0) {
-                    processBtn.textContent = "A processar...";
+                    processBtn.textContent = "IMPORTANDO...";
                     processBtn.disabled = true;
                     const clearOk = await clearDatabase(true);
                     if (clearOk) {
                         const { error } = await supabaseClient.from('Estacionamento').insert(formatted);
-                        if (error) showToast("Erro na inserção: " + error.message);
+                        if (error) showToast("Erro: " + error.message);
                         else {
                             await setLastUpdateDate();
-                            showToast(`${formatted.length} registos importados.`);
+                            showToast(`${formatted.length} NOVOS ACESSOS`);
                             closeModal('uploadModal');
                             fetchData();
                         }
                     }
-                    processBtn.textContent = "Iniciar Importação";
+                    processBtn.textContent = "CONFIRMAR IMPORTAÇÃO";
                     processBtn.disabled = false;
                 }
             };
