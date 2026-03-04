@@ -61,17 +61,15 @@
         #clearSearch:hover {
             color: #1e293b;
         }
-        /* Footer Fixo */
-        footer {
-            height: 60px;
+        /* Sub-header de status */
+        .status-bar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 2rem;
+            padding: 0.5rem 2rem;
             background: #cbd5e1; /* Slate 300 */
-            border-top: 1px solid #94a3b8;
-            box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
-            z-index: 20;
+            border-bottom: 1px solid #94a3b8;
+            z-index: 10;
         }
         /* Efeito de listras sutis na tabela */
         tbody tr:nth-child(even) {
@@ -91,6 +89,18 @@
             Admin
         </button>
     </header>
+
+    <!-- Barra de Estado (Movida para aqui) -->
+    <div class="status-bar">
+        <div class="flex items-center gap-2 text-slate-600 italic text-sm">
+            <span class="font-bold not-italic">Atualizado em:</span>
+            <span id="lastUpdateDate">Carregando...</span>
+        </div>
+        <div class="flex items-center gap-1 text-slate-700 font-bold">
+            <span class="uppercase tracking-wider text-xs">Total:</span>
+            <span id="resultCounter" class="text-lg">0</span>
+        </div>
+    </div>
 
     <!-- Conteúdo Principal -->
     <main class="flex-1 flex flex-col overflow-hidden bg-slate-300">
@@ -122,7 +132,6 @@
             <table class="w-full text-left border-collapse">
                 <thead class="sticky top-0 z-10 bg-slate-300 shadow-sm border-b border-slate-400">
                     <tr>
-                        <!-- Alterado de "Nome do Utente" para "Nome" -->
                         <th class="p-4 font-bold text-slate-800 uppercase text-xs tracking-wider">Nome</th>
                     </tr>
                 </thead>
@@ -131,18 +140,6 @@
             </table>
         </div>
     </main>
-
-    <!-- Footer com Informações de Estado -->
-    <footer>
-        <div class="flex items-center gap-2 text-slate-600 italic text-sm">
-            <span class="font-bold not-italic">Atualizado em:</span>
-            <span id="lastUpdateDate">Carregando...</span>
-        </div>
-        <div class="flex items-center gap-1 text-slate-700 font-bold">
-            <span class="uppercase tracking-wider text-xs">Total:</span>
-            <span id="resultCounter" class="text-lg">0</span>
-        </div>
-    </footer>
 
     <!-- Modais -->
     <div id="detailsModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center z-[70] p-4">
