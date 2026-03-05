@@ -73,8 +73,8 @@
         tbody tr:nth-child(odd) { background-color: #f1f5f9; }
         tbody tr:hover { background-color: #facc15 !important; }
         .user-thumb {
-            width: 45px;
-            height: 45px;
+            width: 60px;
+            height: 60px;
             object-fit: cover;
             border-radius: 50%;
             border: 2px solid #1e293b;
@@ -88,8 +88,8 @@
             border: 3px solid #facc15;
         }
         .photo-preview-container {
-            width: 140px;
-            height: 140px;
+            width: 200px;
+            height: 200px;
             margin: 0 auto 1.5rem;
             position: relative;
         }
@@ -304,7 +304,7 @@
                             <img src="${photo}" class="user-thumb shadow-md group-hover:scale-110 transition-transform"
                                  onclick="event.stopPropagation(); zoomPhoto('${photo}')">
                             <div class="min-w-0">
-                                <div class="text-slate-900 font-bold uppercase truncate text-sm">${item.coluna_b}</div>
+                                <div class="text-slate-900 font-bold uppercase break-all text-sm">${item.coluna_b}</div>
                                 <div class="text-[10px] text-slate-500 font-mono">${item.coluna_a}</div>
                             </div>
                         </div>
