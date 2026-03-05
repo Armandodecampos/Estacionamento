@@ -267,7 +267,7 @@
         async function fetchData() {
             if (!supabaseClient) return;
             // Busca apenas metadados inicialmente para performance
-            const { data, error } = await supabaseClient.from('Estacionamento').select('id, coluna_a, coluna_b, coluna_d').order('coluna_b', { ascending: true });
+            const { data, error } = await supabaseClient.from('Estacionamento').select('id, coluna_a, coluna_b, coluna_d').eq('Ativo', true).order('coluna_b', { ascending: true });
             if (!error) {
                 allData = data;
                 renderTable(allData);
@@ -284,7 +284,7 @@
         async function loadPhotos() {
             if (!supabaseClient) return;
             // Busca as fotos de todos os registros em background
-            const { data, error } = await supabaseClient.from('Estacionamento').select('id, coluna_c');
+            const { data, error } = await supabaseClient.from('Estacionamento').select('id, coluna_c').eq('Ativo', true);
             if (!error && data) {
                 data.forEach(photoData => {
                     const index = allData.findIndex(i => i.id === photoData.id);
@@ -478,26 +478,25 @@
                     coluna_a: r[0] ? String(r[0]).trim() : null,
                     coluna_b: `${r[1] || ''} ${r[2] || ''}`.trim() || 'Sem Nome',
                     coluna_d: r[3] ? String(r[3]).trim() : "GERAL",
-                    coluna_c: null
+                    Ativo: true
                 })).filter(i => i.coluna_a);
 
                 if (formatted.length > 0) {
                     showToast("SINCRONIZANDO BASE...");
 
-                    const currentIds = allData.map(item => item.coluna_a);
+                    const currentActiveIds = allData.map(item => item.coluna_a);
                     const newIds = formatted.map(item => item.coluna_a);
 
-                    const idsToDelete = currentIds.filter(id => !newIds.includes(id));
-                    const recordsToInsert = formatted.filter(item => !currentIds.includes(item.coluna_a));
+                    const idsToDeactivate = currentActiveIds.filter(id => !newIds.includes(id));
 
                     let hasError = false;
-                    if (idsToDelete.length > 0) {
-                        const { error } = await supabaseClient.from('Estacionamento').delete().in('coluna_a', idsToDelete);
+                    if (idsToDeactivate.length > 0) {
+                        const { error } = await supabaseClient.from('Estacionamento').update({ Ativo: false }).in('coluna_a', idsToDeactivate);
                         if (error) hasError = true;
                     }
 
-                    if (!hasError && recordsToInsert.length > 0) {
-                        const { error } = await supabaseClient.from('Estacionamento').insert(recordsToInsert);
+                    if (!hasError) {
+                        const { error } = await supabaseClient.from('Estacionamento').upsert(formatted, { onConflict: 'coluna_a' });
                         if (error) hasError = true;
                     }
 
