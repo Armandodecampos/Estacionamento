@@ -238,7 +238,7 @@
         let isAdmin = false;
         let selectedItem = null;
 
-        const DEFAULT_PHOTO = 'data:image/svg+xml;charset=UTF-8,%3csvg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="white"%3e%3cpath stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /%3e%3cpath stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /%3e%3c/svg%3e';
+        const DEFAULT_PHOTO = 'data:image/svg+xml;charset=UTF-8,%3csvg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="%23facc15"%3e%3cpath stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /%3e%3cpath stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /%3e%3c/svg%3e';
 
         function initSupabase() {
             try {
@@ -295,7 +295,7 @@
                         const img = document.querySelector(`img[data-id="${photoData.id}"]`);
                         if (img && photoData.coluna_c) {
                             img.src = photoData.coluna_c;
-                            img.classList.remove('p-3');
+                            img.classList.remove('p-2');
                         }
                     }
                 });
@@ -321,7 +321,7 @@
                 const tr = document.createElement('tr');
                 tr.className = "cursor-pointer transition-colors group";
                 const photo = item.coluna_c || DEFAULT_PHOTO;
-                const paddingClass = item.coluna_c ? "" : "p-3";
+                const paddingClass = item.coluna_c ? "" : "p-2";
 
                 tr.innerHTML = `
                     <td class="p-4 flex justify-between items-center gap-4 border-b border-slate-300">
