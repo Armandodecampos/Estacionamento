@@ -162,11 +162,14 @@
             <h3 class="text-lg mb-4 text-slate-900 border-b-2 border-yellow-400 pb-1 uppercase font-bold">Dados do Acesso</h3>
             <div class="photo-preview-container">
                 <img id="detPhoto" src="" class="user-photo-large shadow-lg cursor-zoom-in" alt="Foto">
-                <div id="adminPhotoOverlay" class="hidden absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <label class="cursor-pointer">
+                <div id="adminPhotoOverlay" class="hidden absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center gap-6 opacity-0 hover:opacity-100 transition-opacity">
+                    <label class="cursor-pointer hover:scale-110 transition-transform" title="Alterar Foto">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                         <input type="file" id="photoUpload" class="hidden" accept="image/*" onchange="handlePhotoUpload(this)">
                     </label>
+                    <button onclick="removePhoto()" class="cursor-pointer hover:scale-110 transition-transform text-red-500" title="Remover Foto">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
                 </div>
             </div>
             <div class="space-y-4">
@@ -332,24 +335,47 @@
             document.getElementById('detailsModal').classList.remove('hidden');
         }
 
-        async function handlePhotoUpload(input) {
-            if (!input.files[0] || !selectedItem || !supabaseClient) return;
-            const reader = new FileReader();
+        async function savePhoto(base64) {
+            if (!selectedItem || !supabaseClient) return;
             showToast("PROCESSANDO...");
-            reader.onload = async (e) => {
-                const base64 = e.target.result;
-                const { error } = await supabaseClient.from('Estacionamento').update({ coluna_c: base64 }).eq('id', selectedItem.id);
-                if (!error) {
-                    selectedItem.coluna_c = base64;
-                    document.getElementById('detPhoto').src = base64;
-                    fetchData();
-                    showToast("FOTO SALVA COM SUCESSO");
-                } else {
-                    showToast("ERRO AO SALVAR FOTO");
-                }
-            };
+            const { error } = await supabaseClient.from('Estacionamento').update({ coluna_c: base64 }).eq('id', selectedItem.id);
+            if (!error) {
+                selectedItem.coluna_c = base64;
+                document.getElementById('detPhoto').src = base64 || DEFAULT_PHOTO;
+                fetchData();
+                showToast(base64 ? "FOTO SALVA COM SUCESSO" : "FOTO REMOVIDA");
+            } else {
+                showToast("ERRO NA OPERAÇÃO");
+            }
+        }
+
+        async function removePhoto() {
+            if (confirm("Deseja realmente remover esta foto?")) {
+                await savePhoto(null);
+            }
+        }
+
+        async function handlePhotoUpload(input) {
+            if (!input.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => await savePhoto(e.target.result);
             reader.readAsDataURL(input.files[0]);
         }
+
+        window.addEventListener('paste', async (e) => {
+            if (!isAdmin || document.getElementById('detailsModal').classList.contains('hidden')) return;
+
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = async (event) => await savePhoto(event.target.result);
+                    reader.readAsDataURL(blob);
+                    break;
+                }
+            }
+        });
 
         function showToast(msg) {
             const toast = document.getElementById('toast');
