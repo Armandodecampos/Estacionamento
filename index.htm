@@ -161,7 +161,7 @@
         <div class="bg-slate-50 p-6 rounded-2xl shadow-2xl w-full max-w-sm relative border-2 border-slate-900">
             <h3 class="text-lg mb-4 text-slate-900 border-b-2 border-yellow-400 pb-1 uppercase font-bold">Dados do Acesso</h3>
             <div class="photo-preview-container">
-                <img id="detPhoto" src="" class="user-photo-large shadow-lg cursor-zoom-in" alt="Foto">
+                <img id="detPhoto" src="" class="user-photo-large shadow-lg" alt="Foto">
                 <div id="adminPhotoOverlay" class="hidden absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center gap-6 opacity-0 hover:opacity-100 transition-opacity">
                     <label class="cursor-pointer hover:scale-110 transition-transform" title="Alterar Foto">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -326,7 +326,6 @@
             document.getElementById('detInfo').textContent = item.coluna_d || 'Não Informado';
             const photo = item.coluna_c || DEFAULT_PHOTO;
             document.getElementById('detPhoto').src = photo;
-            document.getElementById('detPhoto').onclick = () => zoomPhoto(photo);
 
             const overlay = document.getElementById('adminPhotoOverlay');
             isAdmin ? overlay.classList.remove('hidden') : overlay.classList.add('hidden');
