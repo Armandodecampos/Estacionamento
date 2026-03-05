@@ -266,13 +266,38 @@
 
         async function fetchData() {
             if (!supabaseClient) return;
-            // Busca apenas metadados inicialmente para performance
-            const { data, error } = await supabaseClient.from('Estacionamento').select('id, coluna_a, coluna_b, coluna_d').eq('Ativo', true).order('coluna_b', { ascending: true });
-            if (!error) {
-                allData = data;
-                renderTable(allData);
-                loadPhotos(); // Dispara carregamento das fotos em background
+
+            let allLoadedData = [];
+            let from = 0;
+            const step = 1000;
+            let hasMore = true;
+
+            showToast("CARREGANDO DADOS...");
+
+            while (hasMore) {
+                const { data, error } = await supabaseClient
+                    .from('Estacionamento')
+                    .select('id, coluna_a, coluna_b, coluna_d')
+                    .eq('Ativo', true)
+                    .order('coluna_b', { ascending: true })
+                    .order('id', { ascending: true }) // Ordenação secundária estável para paginação
+                    .range(from, from + step - 1);
+
+                if (error) {
+                    console.error("Erro ao carregar dados:", error);
+                    showToast("ERRO AO CARREGAR DADOS");
+                    hasMore = false;
+                } else {
+                    allLoadedData = allLoadedData.concat(data);
+                    if (data.length < step) hasMore = false;
+                    from += step;
+                }
             }
+
+            allData = allLoadedData;
+            renderTable(allData);
+            showToast(allData.length + " REGISTROS CARREGADOS");
+            loadPhotos();
         }
 
         async function fetchLastUpdate() {
@@ -282,24 +307,63 @@
         }
 
         async function loadPhotos() {
-            if (!supabaseClient) return;
-            // Busca as fotos de todos os registros em background
-            const { data, error } = await supabaseClient.from('Estacionamento').select('id, coluna_c').eq('Ativo', true);
-            if (!error && data) {
-                data.forEach(photoData => {
-                    const index = allData.findIndex(i => i.id === photoData.id);
-                    if (index !== -1) {
-                        allData[index].coluna_c = photoData.coluna_c;
+            if (!supabaseClient || allData.length === 0) return;
 
-                        // Atualiza na tela se estiver visível
-                        const img = document.querySelector(`img[data-id="${photoData.id}"]`);
-                        if (img && photoData.coluna_c) {
-                            img.src = photoData.coluna_c;
-                            img.classList.remove('p-2');
+            const step = 20; // Chunk pequeno para evitar estouro de memória e limites de resposta
+            let loadedCount = 0;
+            const total = allData.length;
+
+            // Criamos um mapa para busca ultra rápida O(1)
+            const dataMap = new Map();
+            allData.forEach((item, index) => dataMap.set(String(item.id), index));
+
+            for (let i = 0; i < total; i += step) {
+                const chunkIds = allData.slice(i, i + step).map(item => item.id);
+
+                const percent = Math.round((i / total) * 100);
+                showToast(`CARREGANDO FOTOS... ${percent}%`);
+
+                const { data, error } = await supabaseClient
+                    .from('Estacionamento')
+                    .select('id, coluna_c')
+                    .in('id', chunkIds);
+
+                if (error) {
+                    console.error("Erro no chunk " + i, error);
+                    continue;
+                }
+
+                if (data) {
+                    data.forEach(row => {
+                        if (!row.coluna_c) return;
+
+                        const index = dataMap.get(String(row.id));
+                        if (index !== undefined) {
+                            let photoSrc = row.coluna_c.trim();
+
+                            // Normalização robusta do base64
+                            if (photoSrc && !photoSrc.startsWith('data:')) {
+                                // Remove quebras de linha ou caracteres inválidos se houver
+                                photoSrc = photoSrc.replace(/\s/g, '');
+                                const prefix = photoSrc.startsWith('iVBORw') ? 'data:image/png;base64,' : 'data:image/jpeg;base64,';
+                                photoSrc = prefix + photoSrc;
+                            }
+
+                            allData[index].coluna_c = photoSrc;
+
+                            // Atualização visual imediata
+                            const imgs = document.querySelectorAll(`img[data-id="${row.id}"]`);
+                            imgs.forEach(img => {
+                                img.src = photoSrc;
+                                img.classList.remove('p-2');
+                            });
+                            loadedCount++;
                         }
-                    }
-                });
+                    });
+                }
             }
+            showToast("TODAS AS FOTOS CARREGADAS");
+            console.log(loadedCount + " fotos exibidas.");
         }
 
         function normalizeString(str) {
@@ -484,20 +548,53 @@
                 if (formatted.length > 0) {
                     showToast("SINCRONIZANDO BASE...");
 
-                    const currentActiveIds = allData.map(item => item.coluna_a);
+                    // Busca TODOS os IDs ativos atuais do banco (com paginação para > 1000 registros)
+                    let currentActiveIds = [];
+                    let from = 0;
+                    const fetchStep = 1000;
+                    let hasMore = true;
+
+                    while (hasMore) {
+                        const { data, error } = await supabaseClient
+                            .from('Estacionamento')
+                            .select('coluna_a')
+                            .eq('Ativo', true)
+                            .range(from, from + fetchStep - 1);
+
+                        if (error) {
+                            showToast("ERRO AO BUSCAR DADOS ATUAIS");
+                            return;
+                        }
+
+                        currentActiveIds = currentActiveIds.concat(data.map(i => i.coluna_a));
+                        if (data.length < fetchStep) hasMore = false;
+                        from += fetchStep;
+                    }
                     const newIds = formatted.map(item => item.coluna_a);
 
                     const idsToDeactivate = currentActiveIds.filter(id => !newIds.includes(id));
 
                     let hasError = false;
-                    if (idsToDeactivate.length > 0) {
-                        const { error } = await supabaseClient.from('Estacionamento').update({ Ativo: false }).in('coluna_a', idsToDeactivate);
+
+                    // 1. Desativar registros que saíram do Excel (em blocos para segurança)
+                    const chunkSize = 100;
+                    for (let i = 0; i < idsToDeactivate.length; i += chunkSize) {
+                        const chunk = idsToDeactivate.slice(i, i + chunkSize);
+                        const { error } = await supabaseClient.from('Estacionamento').update({ Ativo: false }).in('coluna_a', chunk);
                         if (error) hasError = true;
                     }
 
+                    // 2. Sincronizar registros do Excel (em blocos)
+                    // Importante: Para NÃO perder fotos existentes no Supabase,
+                    // NÃO enviamos a coluna_c no objeto de upsert.
                     if (!hasError) {
-                        const { error } = await supabaseClient.from('Estacionamento').upsert(formatted, { onConflict: 'coluna_a' });
-                        if (error) hasError = true;
+                        for (let i = 0; i < formatted.length; i += chunkSize) {
+                            const chunk = formatted.slice(i, i + chunkSize);
+                            const { error } = await supabaseClient.from('Estacionamento').upsert(chunk, {
+                                onConflict: 'coluna_a'
+                            });
+                            if (error) hasError = true;
+                        }
                     }
 
                     if (!hasError) {
@@ -517,9 +614,10 @@
 
         async function clearDatabase() {
             if (!supabaseClient) return;
-            const { error } = await supabaseClient.from('Estacionamento').delete().neq('id', 0);
+            // Mudança para soft-delete: apenas desativa os registros
+            const { error } = await supabaseClient.from('Estacionamento').update({ Ativo: false }).neq('id', 0);
             if (!error) {
-                showToast("BANCO DE DADOS LIMPO");
+                showToast("BANCO DE DADOS DESATIVADO");
                 closeModal('confirmDeleteModal');
                 fetchData();
             }
