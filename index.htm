@@ -128,10 +128,10 @@
     <main class="flex-1 flex flex-col overflow-hidden">
         <div class="search-header-dark border-b border-slate-950 flex items-center px-4 gap-3">
             <div class="search-container">
-                <input 
-                    type="text" 
-                    id="searchInput" 
-                    placeholder="Nome ou Documento..." 
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Nome ou Documento..."
                     class="w-full pl-4 pr-10 py-3 border border-slate-800 rounded-xl focus:ring-2 focus:ring-yellow-400 outline-none shadow-xl text-lg bg-white text-slate-950 font-medium"
                 >
                 <span id="clearSearch" class="text-slate-400 hover:text-slate-900 text-2xl">&times;</span>
@@ -228,7 +228,7 @@
         // Configurações do Supabase
         const _SUPABASE_URL = 'https://rztrygjczjqeqqldiqxa.supabase.co';
         const _SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6dHJ5Z2pjempxZXFxbGRpcXhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNDgyMzIsImV4cCI6MjA3MzYyNDIzMn0.s7QiJWo6SPZRmN1bW1vPyhEis0xO1voNh0GFWPrTLtU';
-        
+
         let supabaseClient;
         let allData = [];
         let isAdmin = false;
@@ -275,6 +275,10 @@
             if (data) document.getElementById('lastUpdateDate').textContent = data.valor;
         }
 
+        function normalizeString(str) {
+            return str ? str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
+        }
+
         function renderTable(data) {
             const container = document.getElementById('dataTableBody');
             const counter = document.getElementById('resultCounter');
@@ -290,11 +294,11 @@
                 const tr = document.createElement('tr');
                 tr.className = "cursor-pointer transition-colors group";
                 const photo = item.coluna_c || DEFAULT_PHOTO;
-                
+
                 tr.innerHTML = `
                     <td class="p-4 flex justify-between items-center gap-4 border-b border-slate-300">
                         <div class="flex items-center gap-4 min-w-0">
-                            <img src="${photo}" class="user-thumb shadow-md group-hover:scale-110 transition-transform" 
+                            <img src="${photo}" class="user-thumb shadow-md group-hover:scale-110 transition-transform"
                                  onclick="event.stopPropagation(); zoomPhoto('${photo}')">
                             <div class="min-w-0">
                                 <div class="text-slate-900 font-bold uppercase truncate text-sm">${item.coluna_b}</div>
@@ -324,7 +328,7 @@
 
             const overlay = document.getElementById('adminPhotoOverlay');
             isAdmin ? overlay.classList.remove('hidden') : overlay.classList.add('hidden');
-            
+
             document.getElementById('detailsModal').classList.remove('hidden');
         }
 
@@ -338,7 +342,7 @@
                 if (!error) {
                     selectedItem.coluna_c = base64;
                     document.getElementById('detPhoto').src = base64;
-                    fetchData(); 
+                    fetchData();
                     showToast("FOTO SALVA COM SUCESSO");
                 } else {
                     showToast("ERRO AO SALVAR FOTO");
@@ -358,7 +362,7 @@
             const email = document.getElementById('adminEmail').value;
             const pass = document.getElementById('adminPass').value;
             const btn = document.getElementById('loginSubmitBtn');
-            
+
             if (!email || !pass) {
                 showToast("PREENCHA TODOS OS CAMPOS");
                 return;
@@ -404,12 +408,12 @@
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
                 const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, range: 2 });
-                
+
                 const formatted = rows.map(r => ({
                     coluna_a: r[0] ? String(r[0]).trim() : null,
                     coluna_b: `${r[1] || ''} ${r[2] || ''}`.trim() || 'Sem Nome',
                     coluna_d: r[3] ? String(r[3]).trim() : "GERAL",
-                    coluna_c: null 
+                    coluna_c: null
                 })).filter(i => i.coluna_a);
 
                 if (formatted.length > 0) {
@@ -441,11 +445,14 @@
 
         function filterData(term) {
             if (!term) { renderTable(allData); return; }
-            const t = term.toLowerCase();
-            const filtered = allData.filter(i => 
-                (i.coluna_b && i.coluna_b.toLowerCase().includes(t)) || 
-                (i.coluna_a && i.coluna_a.toLowerCase().includes(t))
-            );
+
+            const tokens = term.split(/\s+/).filter(token => token.length > 0).map(token => normalizeString(token));
+
+            const filtered = allData.filter(item => {
+                const searchableString = normalizeString(`${item.coluna_a} ${item.coluna_b} ${item.coluna_d}`);
+                return tokens.every(token => searchableString.includes(token));
+            });
+
             renderTable(filtered);
         }
 
@@ -453,7 +460,7 @@
             document.getElementById('clearSearch').style.display = e.target.value ? 'block' : 'none';
             filterData(e.target.value);
         };
-        
+
         document.getElementById('clearSearch').onclick = () => {
             document.getElementById('searchInput').value = '';
             document.getElementById('clearSearch').style.display = 'none';
@@ -472,10 +479,10 @@
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
         function openUploadModal() { document.getElementById('uploadModal').classList.remove('hidden'); }
         function showConfirmDeleteModal() { document.getElementById('confirmDeleteModal').classList.remove('hidden'); }
-        function zoomPhoto(src) { 
+        function zoomPhoto(src) {
             if (src === DEFAULT_PHOTO) return;
-            document.getElementById('zoomedImg').src = src; 
-            document.getElementById('photoZoomModal').classList.remove('hidden'); 
+            document.getElementById('zoomedImg').src = src;
+            document.getElementById('photoZoomModal').classList.remove('hidden');
         }
     </script>
 </body>
