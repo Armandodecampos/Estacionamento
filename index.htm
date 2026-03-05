@@ -266,10 +266,12 @@
 
         async function fetchData() {
             if (!supabaseClient) return;
-            const { data, error } = await supabaseClient.from('Estacionamento').select('*').order('coluna_b', { ascending: true });
+            // Busca apenas metadados inicialmente para performance
+            const { data, error } = await supabaseClient.from('Estacionamento').select('id, coluna_a, coluna_b, coluna_d').order('coluna_b', { ascending: true });
             if (!error) {
                 allData = data;
                 renderTable(allData);
+                loadPhotos(); // Dispara carregamento das fotos em background
             }
         }
 
@@ -277,6 +279,27 @@
             if (!supabaseClient) return;
             const { data } = await supabaseClient.from('sistema_config').select('valor').eq('chave', 'ultima_atualizacao').single();
             if (data) document.getElementById('lastUpdateDate').textContent = data.valor;
+        }
+
+        async function loadPhotos() {
+            if (!supabaseClient) return;
+            // Busca as fotos de todos os registros em background
+            const { data, error } = await supabaseClient.from('Estacionamento').select('id, coluna_c');
+            if (!error && data) {
+                data.forEach(photoData => {
+                    const index = allData.findIndex(i => i.id === photoData.id);
+                    if (index !== -1) {
+                        allData[index].coluna_c = photoData.coluna_c;
+
+                        // Atualiza na tela se estiver visível
+                        const img = document.querySelector(`img[data-id="${photoData.id}"]`);
+                        if (img && photoData.coluna_c) {
+                            img.src = photoData.coluna_c;
+                            img.classList.remove('p-3');
+                        }
+                    }
+                });
+            }
         }
 
         function normalizeString(str) {
@@ -303,7 +326,7 @@
                 tr.innerHTML = `
                     <td class="p-4 flex justify-between items-center gap-4 border-b border-slate-300">
                         <div class="flex items-center gap-4 min-w-0">
-                            <img src="${photo}" class="user-thumb shadow-md group-hover:scale-110 transition-transform ${paddingClass}">
+                            <img src="${photo}" data-id="${item.id}" class="user-thumb shadow-md group-hover:scale-110 transition-transform ${paddingClass}">
                             <div class="min-w-0">
                                 <div class="text-slate-900 font-bold uppercase break-all text-sm">${item.coluna_b}</div>
                                 <div class="text-[10px] text-slate-500 font-mono">${item.coluna_a}</div>
