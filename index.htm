@@ -62,14 +62,12 @@
             color: #000;
         }
         
-        /* Cabeçalho de Busca Cinza Escuro */
         .search-header-dark {
-            background-color: #1e293b; /* Cinza bem escuro (Slate 900) */
+            background-color: #1e293b;
             padding: 16px;
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), 0 4px 6px rgba(0,0,0,0.1);
         }
 
-        /* Sub-header de status */
         .status-bar {
             display: flex;
             align-items: center;
@@ -80,7 +78,6 @@
             z-index: 10;
         }
         
-        /* Listras da tabela */
         tbody tr:nth-child(even) {
             background-color: #e2e8f0;
         }
@@ -126,7 +123,6 @@
     <!-- Conteúdo Principal -->
     <main class="flex-1 flex flex-col overflow-hidden bg-slate-500">
         
-        <!-- Cabeçalho de Busca Cinza Escuro -->
         <div class="search-header-dark border-b border-slate-950 flex flex-nowrap items-center px-4 md:px-8 gap-3">
             <div class="search-container">
                 <input 
@@ -168,7 +164,6 @@
             <div class="space-y-4">
                 <div>
                     <label class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Documento / ID</label>
-                    <!-- Removido o fundo preto e deixado texto simples -->
                     <p id="detId" class="text-lg font-mono text-slate-800 mt-1 font-bold"></p>
                 </div>
                 <div>
@@ -184,7 +179,9 @@
         </div>
     </div>
 
-    <!-- Login Admin -->
+    <!-- Modais Adicionais (Login, Upload, Confirm, Toast) omitidos aqui para brevidade do script, mas permanecem no código final -->
+    <!-- ... Restante dos modais iguais ao original ... -->
+
     <div id="loginModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center z-50 p-4">
         <div class="bg-slate-100 p-6 rounded-2xl shadow-2xl w-full max-w-sm border-2 border-slate-900">
             <div class="flex justify-between items-center mb-6">
@@ -199,7 +196,6 @@
         </div>
     </div>
 
-    <!-- Modal Upload -->
     <div id="uploadModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center z-50 p-4">
         <div class="bg-slate-100 p-6 rounded-2xl shadow-2xl w-full max-w-sm border-2 border-slate-900">
             <h3 class="text-lg mb-2 text-center text-slate-900 uppercase font-bold">Importar Dados</h3>
@@ -210,7 +206,6 @@
         </div>
     </div>
 
-    <!-- Confirmar Exclusão -->
     <div id="confirmDeleteModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center z-[60] p-4">
         <div class="bg-slate-50 p-8 rounded-2xl shadow-2xl w-full max-w-xs text-center border-2 border-red-900">
             <h3 class="text-lg mb-2 text-slate-950 uppercase font-bold">Apagar Tudo?</h3>
@@ -222,7 +217,6 @@
         </div>
     </div>
 
-    <!-- Toast -->
     <div id="toast" class="fixed bottom-6 right-1/2 translate-x-1/2 sm:translate-x-0 sm:right-6 bg-slate-950 text-yellow-400 px-6 py-3 rounded-xl shadow-2xl transform translate-y-64 transition-transform duration-500 z-[100] border border-yellow-400/30 flex items-center gap-3">
         <div class="w-2 h-2 bg-yellow-400 rounded-full"></div>
         <span id="toastMsg" class="uppercase tracking-wider text-[11px] font-bold"></span>
@@ -231,7 +225,6 @@
     <script>
         const supabaseUrl = 'https://rztrygjczjqeqqldiqxa.supabase.co';
         const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6dHJ5Z2pjempxZXFxbGRpcXhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNDgyMzIsImV4cCI6MjA3MzYyNDIzMn0.s7QiJWo6SPZRmN1bW1vPyhEis0xO1voNh0GFWPrTLtU';
-        
         const supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
         
         let allData = [];
@@ -285,36 +278,14 @@
 
         async function fetchLastUpdate() {
             try {
-                const { data, error } = await supabaseClient
-                    .from('sistema_config')
-                    .select('valor')
-                    .eq('chave', 'ultima_atualizacao')
-                    .single();
-                
-                if (data) {
-                    const parts = data.valor.split(' ');
-                    lastUpdateSpan.textContent = parts[0]; 
-                } else {
-                    lastUpdateSpan.textContent = '---';
-                }
-            } catch (e) {
-                lastUpdateSpan.textContent = 'Indisponível';
-            }
+                const { data } = await supabaseClient.from('sistema_config').select('valor').eq('chave', 'ultima_atualizacao').single();
+                lastUpdateSpan.textContent = data ? data.valor.split(' ')[0] : '---';
+            } catch (e) { lastUpdateSpan.textContent = 'Indisponível'; }
         }
 
         async function setLastUpdateDate() {
-            const now = new Date();
-            const dateStr = now.toLocaleDateString('pt-BR');
-            
-            try {
-                await supabaseClient
-                    .from('sistema_config')
-                    .upsert({ chave: 'ultima_atualizacao', valor: dateStr });
-                
-                lastUpdateSpan.textContent = dateStr;
-            } catch (e) {
-                console.error("Erro ao salvar data:", e);
-            }
+            const dateStr = new Date().toLocaleDateString('pt-BR');
+            try { await supabaseClient.from('sistema_config').upsert({ chave: 'ultima_atualizacao', valor: dateStr }); lastUpdateSpan.textContent = dateStr; } catch (e) { console.error(e); }
         }
 
         async function handleLogin() {
@@ -347,16 +318,11 @@
 
         function normalizeString(str) {
             if (!str) return "";
-            return str.toString().toLowerCase()
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "");
+            return str.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         }
 
         function filterData(term) {
-            if (!term.trim()) {
-                renderTable(allData);
-                return;
-            }
+            if (!term.trim()) { renderTable(allData); return; }
             const normalizedTerm = normalizeString(term);
             const parts = normalizedTerm.split(/\s+/).filter(p => p !== "");
             const filtered = allData.filter(item => {
@@ -376,11 +342,22 @@
             data.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-yellow-400 transition-all clickable-row group border-b border-slate-300";
+                
+                // Layout atualizado: Nome à esquerda, Departamento à direita
                 tr.innerHTML = `
-                    <td class="p-3.5 flex justify-between items-center">
-                        <span class="text-slate-950 text-base group-hover:pl-2 transition-all font-semibold uppercase">${item.coluna_b || 'UTENTE'}</span>
-                        <div class="flex items-center gap-2">
-                             <span class="text-white bg-slate-900 px-2.5 py-1 rounded text-[9px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all font-bold">Ver</span>
+                    <td class="p-3.5 flex justify-between items-center gap-4">
+                        <div class="flex flex-col min-w-0">
+                            <span class="text-slate-950 text-base group-hover:pl-2 transition-all font-semibold uppercase truncate">
+                                ${item.coluna_b || 'UTENTE'}
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-3 flex-shrink-0">
+                            <span class="text-[10px] text-slate-600 font-bold uppercase italic tracking-tighter bg-slate-200/50 px-2 py-0.5 rounded group-hover:bg-slate-900 group-hover:text-yellow-400 transition-colors">
+                                ${item.coluna_d || '---'}
+                            </span>
+                            <div class="hidden sm:flex bg-slate-900 text-white px-2 py-1 rounded text-[8px] uppercase font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+                                Ver
+                            </div>
                         </div>
                     </td>
                 `;
@@ -398,31 +375,13 @@
 
         async function clearDatabase(silent = false) {
             const confirmBtn = document.getElementById('confirmClearBtn');
-            if (!silent) {
-                confirmBtn.disabled = true;
-                confirmBtn.textContent = "AGUARDE...";
-            }
+            if (!silent) { confirmBtn.disabled = true; confirmBtn.textContent = "AGUARDE..."; }
             try {
-                const { error } = await supabaseClient
-                    .from('Estacionamento')
-                    .delete()
-                    .neq('coluna_a', 'PROTECTED_ROW_ID');
+                const { error } = await supabaseClient.from('Estacionamento').delete().neq('coluna_a', 'PROTECTED_ROW_ID');
                 if (error) throw error;
-                if (!silent) {
-                    showToast("Limpeza concluída");
-                    closeModal('confirmDeleteModal');
-                    fetchData();
-                }
+                if (!silent) { showToast("Limpeza concluída"); closeModal('confirmDeleteModal'); fetchData(); }
                 return true;
-            } catch (err) {
-                if (!silent) showToast("Erro na exclusão");
-                return false;
-            } finally {
-                if (!silent) {
-                    confirmBtn.disabled = false;
-                    confirmBtn.textContent = "LIMPAR AGORA";
-                }
-            }
+            } catch (err) { if (!silent) showToast("Erro na exclusão"); return false; } finally { if (!silent) { confirmBtn.disabled = false; confirmBtn.textContent = "LIMPAR AGORA"; } }
         }
 
         async function processExcel() {
@@ -442,16 +401,10 @@
                 if (formatted.length > 0) {
                     processBtn.textContent = "IMPORTANDO...";
                     processBtn.disabled = true;
-                    const clearOk = await clearDatabase(true);
-                    if (clearOk) {
+                    if (await clearDatabase(true)) {
                         const { error } = await supabaseClient.from('Estacionamento').insert(formatted);
                         if (error) showToast("Erro: " + error.message);
-                        else {
-                            await setLastUpdateDate();
-                            showToast(`${formatted.length} IMPORTADOS`);
-                            closeModal('uploadModal');
-                            fetchData();
-                        }
+                        else { await setLastUpdateDate(); showToast(`${formatted.length} IMPORTADOS`); closeModal('uploadModal'); fetchData(); }
                     }
                     processBtn.textContent = "CONFIRMAR";
                     processBtn.disabled = false;
