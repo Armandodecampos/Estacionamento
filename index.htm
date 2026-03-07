@@ -97,6 +97,23 @@
             margin: 0 auto 1.5rem;
             position: relative;
         }
+        .loading-strip {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #1e293b;
+            color: #facc15;
+            font-size: 10px;
+            font-weight: bold;
+            text-align: center;
+            padding: 4px;
+            padding-bottom: calc(4px + env(safe-area-inset-bottom));
+            z-index: 100;
+            border-top: 2px solid #facc15;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
     </style>
 </head>
 <body class="font-sans text-sm">
@@ -227,6 +244,10 @@
         </div>
     </div>
 
+    <div id="loadingStrip" class="loading-strip hidden">
+        <span id="loadingMsg">CARREGANDO...</span>
+    </div>
+
     <div id="toast" class="fixed bottom-6 right-1/2 translate-x-1/2 bg-slate-950 text-yellow-400 px-6 py-3 rounded-xl shadow-2xl transform translate-y-64 transition-transform duration-500 z-[100] border border-yellow-400/30 font-bold uppercase text-[10px]">
         <span id="toastMsg"></span>
     </div>
@@ -275,7 +296,7 @@
             const step = 1000;
             let hasMore = true;
 
-            showToast("CARREGANDO DADOS...");
+            updateLoadingStrip("CARREGANDO DADOS...", true);
 
             while (hasMore) {
                 const { data, error } = await supabaseClient
@@ -289,7 +310,9 @@
                 if (error) {
                     console.error("Erro ao carregar dados:", error);
                     showToast("ERRO AO CARREGAR DADOS");
+                    updateLoadingStrip("", false);
                     hasMore = false;
+                    return;
                 } else {
                     allLoadedData = allLoadedData.concat(data);
                     if (data.length < step) hasMore = false;
@@ -299,7 +322,6 @@
 
             allData = allLoadedData;
             renderTable(allData);
-            showToast(allData.length + " REGISTROS CARREGADOS");
             loadPhotos();
         }
 
@@ -310,7 +332,10 @@
         }
 
         async function loadPhotos() {
-            if (!supabaseClient || allData.length === 0) return;
+            if (!supabaseClient || allData.length === 0) {
+                updateLoadingStrip("", false);
+                return;
+            }
 
             const step = 20; // Chunk pequeno para evitar estouro de memória e limites de resposta
             let loadedCount = 0;
@@ -324,7 +349,7 @@
                 const chunkIds = allData.slice(i, i + step).map(item => item.id);
 
                 const percent = Math.round((i / total) * 100);
-                showToast(`CARREGANDO FOTOS... ${percent}%`);
+                updateLoadingStrip(`CARREGANDO FOTOS... ${percent}%`, true);
 
                 const { data, error } = await supabaseClient
                     .from('Estacionamento')
@@ -365,6 +390,7 @@
                     });
                 }
             }
+            updateLoadingStrip("", false);
             showToast("TODAS AS FOTOS CARREGADAS");
             console.log(loadedCount + " fotos exibidas.");
         }
@@ -483,6 +509,17 @@
             }
         });
 
+        function updateLoadingStrip(msg, show) {
+            const strip = document.getElementById('loadingStrip');
+            const msgEl = document.getElementById('loadingMsg');
+            if (show) {
+                msgEl.textContent = msg;
+                strip.classList.remove('hidden');
+            } else {
+                strip.classList.add('hidden');
+            }
+        }
+
         function showToast(msg) {
             const toast = document.getElementById('toast');
             document.getElementById('toastMsg').textContent = msg;
@@ -549,7 +586,7 @@
                 })).filter(i => i.coluna_a);
 
                 if (formatted.length > 0) {
-                    showToast("SINCRONIZANDO BASE...");
+                    updateLoadingStrip("SINCRONIZANDO BASE...", true);
 
                     // Busca TODOS os IDs ativos atuais do banco (com paginação para > 1000 registros)
                     let currentActiveIds = [];
@@ -604,10 +641,12 @@
                         const now = new Date().toLocaleDateString('pt-BR');
                         await supabaseClient.from('sistema_config').upsert({ chave: 'ultima_atualizacao', valor: now });
                         document.getElementById('lastUpdateDate').textContent = now;
+                        updateLoadingStrip("", false);
                         showToast("SINCRONIZAÇÃO CONCLUÍDA");
                         closeModal('uploadModal');
                         fetchData();
                     } else {
+                        updateLoadingStrip("", false);
                         showToast("ERRO NA SINCRONIZAÇÃO");
                     }
                 }
