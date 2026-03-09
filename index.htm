@@ -610,6 +610,14 @@
                         if (data.length < fetchStep) hasMore = false;
                         from += fetchStep;
                     }
+
+                    // Marca novos registros que não estão na base atual
+                    formatted.forEach(item => {
+                        if (!currentActiveIds.includes(item.coluna_a)) {
+                            item.coluna_b += " (Novo)";
+                        }
+                    });
+
                     const newIds = formatted.map(item => item.coluna_a);
 
                     const idsToDeactivate = currentActiveIds.filter(id => !newIds.includes(id));
