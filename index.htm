@@ -116,22 +116,23 @@
         }
         .novo-badge {
             position: absolute;
-            top: -6px;
-            left: -6px;
+            top: -8px;
+            left: -8px;
             background: #facc15;
             color: #000;
             font-weight: 900;
-            font-size: 7px;
-            width: 32px;
-            height: 32px;
+            font-size: 8px;
+            width: 36px;
+            height: 36px;
             z-index: 10;
-            clip-path: polygon(50% 0%, 63% 13%, 81% 6%, 83% 25%, 100% 31%, 91% 48%, 100% 66%, 83% 72%, 79% 91%, 63% 84%, 50% 100%, 37% 84%, 21% 91%, 17% 72%, 0% 66%, 9% 48%, 0% 31%, 17% 25%, 19% 6%, 37% 13%);
+            clip-path: polygon(50% 0%, 61% 10%, 75% 5%, 80% 18%, 94% 20%, 90% 34%, 100% 43%, 92% 56%, 98% 70%, 85% 75%, 80% 89%, 67% 88%, 59% 100%, 46% 91%, 32% 98%, 25% 85%, 11% 88%, 10% 74%, 0% 67%, 8% 54%, 2% 40%, 15% 35%, 15% 20%, 29% 18%, 35% 5%, 46% 13%);
             display: flex;
             align-items: center;
             justify-content: center;
             text-transform: uppercase;
             line-height: 1;
             text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
     </style>
 </head>
@@ -320,7 +321,7 @@
             while (hasMore) {
                 const { data, error } = await supabaseClient
                     .from('Estacionamento')
-                    .select('id, coluna_a, coluna_b, coluna_d, is_new')
+                    .select('id, coluna_a, coluna_b, coluna_d, data_criacao')
                     .eq('Ativo', true)
                     .order('coluna_b', { ascending: true })
                     .order('id', { ascending: true }) // Ordenação secundária estável para paginação
@@ -434,7 +435,17 @@
                 tr.className = "cursor-pointer transition-colors group";
                 const photo = item.coluna_c || DEFAULT_PHOTO;
                 const paddingClass = item.coluna_c ? "" : "p-2";
-                const novoBadge = item.is_new ? '<div class="novo-badge">NOVO</div>' : '';
+
+                // Lógica de 7 dias para o selo NOVO
+                let novoBadge = '';
+                if (item.data_criacao) {
+                    const dataCriacao = new Date(item.data_criacao);
+                    const hoje = new Date();
+                    const diffDias = Math.floor((hoje - dataCriacao) / (1000 * 60 * 60 * 24));
+                    if (diffDias < 7) {
+                        novoBadge = '<div class="novo-badge">NOVO</div>';
+                    }
+                }
 
                 tr.innerHTML = `
                     <td class="p-4 flex justify-between items-center gap-4 border-b border-slate-300">
@@ -605,15 +616,14 @@
                     coluna_a: r[0] ? String(r[0]).trim() : null,
                     coluna_b: `${r[1] || ''} ${r[2] || ''}`.trim() || 'Sem Nome',
                     coluna_d: r[3] ? String(r[3]).trim() : "GERAL",
-                    Ativo: true,
-                    is_new: false
+                    Ativo: true
                 })).filter(i => i.coluna_a);
 
                 if (formatted.length > 0) {
                     updateLoadingStrip("SINCRONIZANDO BASE...", true);
 
-                    // Busca TODOS os IDs ativos atuais do banco (com paginação para > 1000 registros)
-                    let currentActiveIds = [];
+                    // Busca IDs e datas de criação atuais
+                    let currentRecordsMap = new Map();
                     let from = 0;
                     const fetchStep = 1000;
                     let hasMore = true;
@@ -621,7 +631,7 @@
                     while (hasMore) {
                         const { data, error } = await supabaseClient
                             .from('Estacionamento')
-                            .select('coluna_a')
+                            .select('coluna_a, data_criacao')
                             .eq('Ativo', true)
                             .range(from, from + fetchStep - 1);
 
@@ -630,21 +640,23 @@
                             return;
                         }
 
-                        currentActiveIds = currentActiveIds.concat(data.map(i => i.coluna_a));
+                        data.forEach(i => currentRecordsMap.set(i.coluna_a, i.data_criacao));
                         if (data.length < fetchStep) hasMore = false;
                         from += fetchStep;
                     }
 
-                    // Identifica novos registros e reseta is_new para os existentes
+                    // Identifica novos registros e preserva data_criacao dos existentes
+                    const now = new Date().toISOString();
                     formatted.forEach(item => {
-                        if (!currentActiveIds.includes(item.coluna_a)) {
-                            item.is_new = true;
+                        if (currentRecordsMap.has(item.coluna_a)) {
+                            item.data_criacao = currentRecordsMap.get(item.coluna_a);
                         } else {
-                            item.is_new = false;
+                            item.data_criacao = now;
                         }
                     });
 
                     const newIds = formatted.map(item => item.coluna_a);
+                    const currentActiveIds = Array.from(currentRecordsMap.keys());
 
                     const idsToDeactivate = currentActiveIds.filter(id => !newIds.includes(id));
 
