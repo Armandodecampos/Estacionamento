@@ -724,7 +724,12 @@
             for (let i = 0; i < idsToDeactivate.length; i += chunkSize) {
                 const chunk = idsToDeactivate.slice(i, i + chunkSize);
                 const { error } = await supabaseClient.from('Estacionamento').update({ Ativo: false }).in('coluna_a', chunk);
-                if (error) hasError = true;
+                if (error) {
+                    console.error(error);
+                    alert("Erro ao desativar registros: " + error.message);
+                    hasError = true;
+                    break;
+                }
             }
 
             // 2. Sincronizar registros do Excel
@@ -734,7 +739,12 @@
                     const { error } = await supabaseClient.from('Estacionamento').upsert(chunk, {
                         onConflict: 'coluna_a'
                     });
-                    if (error) hasError = true;
+                    if (error) {
+                        console.error(error);
+                        alert("Erro ao sincronizar registros: " + error.message);
+                        hasError = true;
+                        break;
+                    }
                 }
             }
 
@@ -763,6 +773,8 @@
                 .eq('Ativo', true);
 
             if (resetError) {
+                console.error(resetError);
+                alert("Erro ao resetar categorias: " + resetError.message);
                 showToast("ERRO AO RESETAR STATUS");
                 updateLoadingStrip("", false);
                 return;
@@ -784,7 +796,12 @@
                         .from('Estacionamento')
                         .update({ categoria: 'MENSALISTA' })
                         .in('id', chunk);
-                    if (error) hasError = true;
+                    if (error) {
+                        console.error(error);
+                        alert("Erro ao atualizar mensalistas: " + error.message);
+                        hasError = true;
+                        break;
+                    }
                 }
 
                 if (!hasError) {
