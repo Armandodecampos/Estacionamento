@@ -217,6 +217,7 @@
                 <div><label class="text-[10px] text-slate-500 uppercase font-bold">Documento / ID</label><p id="detId" class="text-lg font-mono text-slate-800 font-bold"></p></div>
                 <div><label class="text-[10px] text-slate-500 uppercase font-bold">Nome Completo</label><p id="detNome" class="text-xl text-slate-900 font-bold"></p></div>
                 <div><label class="text-[10px] text-slate-500 uppercase font-bold">Vínculo / Setor</label><p id="detInfo" class="text-base text-slate-700 italic"></p></div>
+                <div><label class="text-[10px] text-slate-500 uppercase font-bold">Categoria</label><p id="detCat" class="text-base font-bold uppercase"></p></div>
             </div>
             <button onclick="closeModal('detailsModal')" class="w-full mt-6 bg-slate-900 hover:bg-black text-white py-3 rounded-xl font-bold uppercase shadow-md">Voltar</button>
         </div>
@@ -248,7 +249,25 @@
 
     <div id="uploadModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center z-50 p-4">
         <div class="bg-slate-100 p-6 rounded-2xl shadow-2xl w-full max-w-sm border-2 border-slate-900">
-            <h3 class="text-lg mb-2 text-center text-slate-900 uppercase font-bold">Importar Excel</h3>
+            <h3 class="text-lg mb-4 text-center text-slate-900 uppercase font-bold">Importar Excel</h3>
+
+            <div class="flex flex-col gap-2 mb-4">
+                <label class="flex items-center gap-2 cursor-pointer bg-white p-3 rounded-lg border border-slate-300 hover:bg-yellow-50 transition-colors">
+                    <input type="radio" name="importType" value="base" checked class="w-4 h-4 text-slate-900 focus:ring-yellow-400">
+                    <div class="flex flex-col">
+                        <span class="text-xs font-bold uppercase text-slate-900">Base de Dados</span>
+                        <span class="text-[9px] text-slate-500">Cadastros completos (Colunas A, B, C, E)</span>
+                    </div>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer bg-white p-3 rounded-lg border border-slate-300 hover:bg-yellow-50 transition-colors">
+                    <input type="radio" name="importType" value="mensalistas" class="w-4 h-4 text-slate-900 focus:ring-yellow-400">
+                    <div class="flex flex-col">
+                        <span class="text-xs font-bold uppercase text-slate-900">Lista de Mensalistas</span>
+                        <span class="text-[9px] text-slate-500">Filtrar mensalistas (Coluna B)</span>
+                    </div>
+                </label>
+            </div>
+
             <input type="file" id="excelInput" accept=".xlsx, .xls" class="mb-4 block w-full text-xs bg-white p-2 border border-slate-300">
             <button onclick="processExcel()" id="processBtn" class="w-full bg-slate-900 text-white p-3 rounded-lg font-bold uppercase shadow-md">Processar Arquivo</button>
             <button onclick="closeModal('uploadModal')" class="w-full mt-2 text-xs text-slate-500">Fechar</button>
@@ -321,7 +340,7 @@
             while (hasMore) {
                 const { data, error } = await supabaseClient
                     .from('Estacionamento')
-                    .select('id, coluna_a, coluna_b, coluna_d, data_criacao')
+                    .select('id, coluna_a, coluna_b, coluna_d, data_criacao, data_importacao')
                     .eq('Ativo', true)
                     .order('coluna_b', { ascending: true })
                     .order('id', { ascending: true }) // Ordenação secundária estável para paginação
@@ -416,7 +435,7 @@
         }
 
         function normalizeString(str) {
-            return str ? str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
+            return str ? String(str).normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/\s+/g, ' ') : "";
         }
 
         function renderTable(data) {
@@ -447,6 +466,9 @@
                     }
                 }
 
+                const isMensalista = item.data_importacao === 'MENSALISTA';
+                const mensalistaBadge = isMensalista ? '<span class="text-[8px] bg-yellow-400 text-black px-1.5 py-0.5 rounded-full font-black ml-2 align-middle">MENSALISTA</span>' : '';
+
                 tr.innerHTML = `
                     <td class="p-4 flex justify-between items-center gap-4 border-b border-slate-300">
                         <div class="flex items-center gap-4 min-w-0">
@@ -455,7 +477,10 @@
                                 <img src="${photo}" data-id="${item.id}" class="user-thumb shadow-md group-hover:scale-110 transition-transform ${paddingClass}">
                             </div>
                             <div class="min-w-0">
-                                <div class="text-slate-900 font-bold uppercase break-all text-sm">${item.coluna_b}</div>
+                                <div class="text-slate-900 font-bold uppercase break-all text-sm">
+                                    ${item.coluna_b}
+                                    ${mensalistaBadge}
+                                </div>
                                 <div class="text-[10px] text-slate-500 font-mono">${item.coluna_a}</div>
                             </div>
                         </div>
@@ -476,6 +501,15 @@
             document.getElementById('detId').textContent = item.coluna_a;
             document.getElementById('detNome').textContent = item.coluna_b;
             document.getElementById('detInfo').textContent = item.coluna_d || 'Não Informado';
+
+            const catEl = document.getElementById('detCat');
+            if (item.data_importacao === 'MENSALISTA') {
+                catEl.textContent = 'MENSALISTA';
+                catEl.className = 'text-base font-bold uppercase text-yellow-600';
+            } else {
+                catEl.textContent = 'NORMAL';
+                catEl.className = 'text-base font-bold uppercase text-slate-500';
+            }
 
             const photoEl = document.getElementById('detPhoto');
             const photo = item.coluna_c || DEFAULT_PHOTO;
@@ -605,99 +639,170 @@
 
         async function processExcel() {
             const file = document.getElementById('excelInput').files[0];
+            const importType = document.querySelector('input[name="importType"]:checked').value;
+
             if (!file || !supabaseClient) return;
+
             const reader = new FileReader();
             reader.onload = async (e) => {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
-                const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, range: 2 });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, range: 2 });
 
-                const formatted = rows.map(r => ({
-                    coluna_a: r[0] ? String(r[0]).trim() : null,
-                    coluna_b: `${r[1] || ''} ${r[2] || ''}`.trim() || 'Sem Nome',
-                    coluna_d: r[3] ? String(r[3]).trim() : "GERAL",
-                    Ativo: true
-                })).filter(i => i.coluna_a);
-
-                if (formatted.length > 0) {
-                    updateLoadingStrip("SINCRONIZANDO BASE...", true);
-
-                    // Busca IDs e datas de criação atuais
-                    let currentRecordsMap = new Map();
-                    let from = 0;
-                    const fetchStep = 1000;
-                    let hasMore = true;
-
-                    while (hasMore) {
-                        const { data, error } = await supabaseClient
-                            .from('Estacionamento')
-                            .select('coluna_a, data_criacao')
-                            .eq('Ativo', true)
-                            .range(from, from + fetchStep - 1);
-
-                        if (error) {
-                            showToast("ERRO AO BUSCAR DADOS ATUAIS");
-                            return;
-                        }
-
-                        data.forEach(i => currentRecordsMap.set(i.coluna_a, i.data_criacao));
-                        if (data.length < fetchStep) hasMore = false;
-                        from += fetchStep;
-                    }
-
-                    // Identifica novos registros e preserva data_criacao dos existentes
-                    const now = new Date().toISOString();
-                    formatted.forEach(item => {
-                        if (currentRecordsMap.has(item.coluna_a)) {
-                            item.data_criacao = currentRecordsMap.get(item.coluna_a);
-                        } else {
-                            item.data_criacao = now;
-                        }
-                    });
-
-                    const newIds = formatted.map(item => item.coluna_a);
-                    const currentActiveIds = Array.from(currentRecordsMap.keys());
-
-                    const idsToDeactivate = currentActiveIds.filter(id => !newIds.includes(id));
-
-                    let hasError = false;
-
-                    // 1. Desativar registros que saíram do Excel (em blocos para segurança)
-                    const chunkSize = 100;
-                    for (let i = 0; i < idsToDeactivate.length; i += chunkSize) {
-                        const chunk = idsToDeactivate.slice(i, i + chunkSize);
-                        const { error } = await supabaseClient.from('Estacionamento').update({ Ativo: false }).in('coluna_a', chunk);
-                        if (error) hasError = true;
-                    }
-
-                    // 2. Sincronizar registros do Excel (em blocos)
-                    // Importante: Para NÃO perder fotos existentes no Supabase,
-                    // NÃO enviamos a coluna_c no objeto de upsert.
-                    if (!hasError) {
-                        for (let i = 0; i < formatted.length; i += chunkSize) {
-                            const chunk = formatted.slice(i, i + chunkSize);
-                            const { error } = await supabaseClient.from('Estacionamento').upsert(chunk, {
-                                onConflict: 'coluna_a'
-                            });
-                            if (error) hasError = true;
-                        }
-                    }
-
-                    if (!hasError) {
-                        const now = new Date().toLocaleDateString('pt-BR');
-                        await supabaseClient.from('sistema_config').upsert({ chave: 'ultima_atualizacao', valor: now });
-                        document.getElementById('lastUpdateDate').textContent = now;
-                        updateLoadingStrip("", false);
-                        showToast("SINCRONIZAÇÃO CONCLUÍDA");
-                        closeModal('uploadModal');
-                        fetchData();
-                    } else {
-                        updateLoadingStrip("", false);
-                        showToast("ERRO NA SINCRONIZAÇÃO");
-                    }
+                if (importType === 'base') {
+                    await handleBaseImport(rows);
+                } else {
+                    await handleMensalistaImport(rows);
                 }
             };
             reader.readAsArrayBuffer(file);
+        }
+
+        async function handleBaseImport(rows) {
+            const formatted = rows.map(r => ({
+                coluna_a: r[0] ? String(r[0]).trim() : null,
+                coluna_b: `${r[1] || ''} ${r[2] || ''}`.trim() || 'Sem Nome',
+                coluna_d: r[4] ? String(r[4]).trim() : "GERAL",
+                data_importacao: 'NORMAL',
+                Ativo: true
+            })).filter(i => i.coluna_a);
+
+            if (formatted.length === 0) {
+                showToast("ARQUIVO VAZIO OU INVÁLIDO");
+                return;
+            }
+
+            updateLoadingStrip("SINCRONIZANDO BASE...", true);
+
+            // Busca IDs e datas de criação atuais
+            let currentRecordsMap = new Map();
+            let from = 0;
+            const fetchStep = 1000;
+            let hasMore = true;
+
+            while (hasMore) {
+                const { data, error } = await supabaseClient
+                    .from('Estacionamento')
+                    .select('coluna_a, data_criacao')
+                    .eq('Ativo', true)
+                    .range(from, from + fetchStep - 1);
+
+                if (error) {
+                    showToast("ERRO AO BUSCAR DADOS ATUAIS");
+                    updateLoadingStrip("", false);
+                    return;
+                }
+
+                data.forEach(i => currentRecordsMap.set(i.coluna_a, i.data_criacao));
+                if (data.length < fetchStep) hasMore = false;
+                from += fetchStep;
+            }
+
+            // Identifica novos registros e preserva data_criacao dos existentes
+            const now = new Date().toISOString();
+            formatted.forEach(item => {
+                if (currentRecordsMap.has(item.coluna_a)) {
+                    item.data_criacao = currentRecordsMap.get(item.coluna_a);
+                } else {
+                    item.data_criacao = now;
+                }
+            });
+
+            const newIds = formatted.map(item => item.coluna_a);
+            const currentActiveIds = Array.from(currentRecordsMap.keys());
+            const idsToDeactivate = currentActiveIds.filter(id => !newIds.includes(id));
+
+            let hasError = false;
+
+            // 1. Desativar registros que saíram do Excel
+            const chunkSize = 100;
+            for (let i = 0; i < idsToDeactivate.length; i += chunkSize) {
+                const chunk = idsToDeactivate.slice(i, i + chunkSize);
+                const { error } = await supabaseClient.from('Estacionamento').update({ Ativo: false }).in('coluna_a', chunk);
+                if (error) hasError = true;
+            }
+
+            // 2. Sincronizar registros do Excel
+            if (!hasError) {
+                for (let i = 0; i < formatted.length; i += chunkSize) {
+                    const chunk = formatted.slice(i, i + chunkSize);
+                    const { error } = await supabaseClient.from('Estacionamento').upsert(chunk, {
+                        onConflict: 'coluna_a'
+                    });
+                    if (error) hasError = true;
+                }
+            }
+
+            if (!hasError) {
+                finishImport();
+            } else {
+                updateLoadingStrip("", false);
+                showToast("ERRO NA SINCRONIZAÇÃO");
+            }
+        }
+
+        async function handleMensalistaImport(rows) {
+            const mensalistasNomes = rows.map(r => normalizeString(r[1])).filter(n => n);
+
+            if (mensalistasNomes.length === 0) {
+                showToast("NENHUM NOME ENCONTRADO NA COLUNA B");
+                return;
+            }
+
+            updateLoadingStrip("PROCESSANDO MENSALISTAS...", true);
+
+            // 1. Resetar todos para NORMAL
+            const { error: resetError } = await supabaseClient
+                .from('Estacionamento')
+                .update({ data_importacao: 'NORMAL' })
+                .eq('Ativo', true);
+
+            if (resetError) {
+                showToast("ERRO AO RESETAR STATUS");
+                updateLoadingStrip("", false);
+                return;
+            }
+
+            // 2. Atualizar quem está na lista
+            // Como a correspondência é por nome e o banco pode ter nomes ligeiramente diferentes (com/sem espaços extras),
+            // faremos a correspondência em memória com os dados já carregados (allData)
+            const idsParaAtualizar = allData
+                .filter(item => mensalistasNomes.includes(normalizeString(item.coluna_b)))
+                .map(item => item.id);
+
+            if (idsParaAtualizar.length > 0) {
+                let hasError = false;
+                const chunkSize = 100;
+                for (let i = 0; i < idsParaAtualizar.length; i += chunkSize) {
+                    const chunk = idsParaAtualizar.slice(i, i + chunkSize);
+                    const { error } = await supabaseClient
+                        .from('Estacionamento')
+                        .update({ data_importacao: 'MENSALISTA' })
+                        .in('id', chunk);
+                    if (error) hasError = true;
+                }
+
+                if (!hasError) {
+                    finishImport();
+                } else {
+                    showToast("ERRO AO ATUALIZAR MENSALISTAS");
+                    updateLoadingStrip("", false);
+                }
+            } else {
+                finishImport();
+                showToast("NENHUM MENSALISTA CORRESPONDENTE ENCONTRADO");
+            }
+        }
+
+        async function finishImport() {
+            const now = new Date().toLocaleDateString('pt-BR');
+            await supabaseClient.from('sistema_config').upsert({ chave: 'ultima_atualizacao', valor: now });
+            document.getElementById('lastUpdateDate').textContent = now;
+            updateLoadingStrip("", false);
+            showToast("SINCRONIZAÇÃO CONCLUÍDA");
+            closeModal('uploadModal');
+            fetchData();
         }
 
         async function clearDatabase() {
