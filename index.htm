@@ -155,9 +155,15 @@
 
     <!-- Barra de Estado -->
     <div class="status-bar text-[10px] sm:text-xs">
-        <div class="flex items-center gap-2 text-slate-900 italic">
-            <span class="not-italic font-bold">BASE ATUALIZADA EM:</span>
-            <span id="lastUpdateDate" class="font-mono">---</span>
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 text-slate-900 italic">
+                <span class="not-italic font-bold">BASE ATUALIZADA EM:</span>
+                <span id="lastUpdateDate" class="font-mono">---</span>
+            </div>
+            <div id="viewModeFilter" class="hidden flex items-center gap-1.5 bg-yellow-400 text-black px-2 py-0.5 rounded shadow-sm font-bold animate-pulse">
+                <span>FILTRO: MENSALISTAS</span>
+                <button onclick="resetViewMode()" class="bg-black/10 hover:bg-black/20 px-1 rounded transition-colors" title="Ver Todos">&times;</button>
+            </div>
         </div>
         <div class="flex items-center gap-2 text-slate-900">
             <span class="uppercase font-bold">REGISTROS:</span>
@@ -302,6 +308,7 @@
         let isAdmin = false;
         let selectedItem = null;
         let availableColumns = [];
+        let currentViewMode = 'all'; // 'all' ou 'mensalistas'
 
         const DEFAULT_PHOTO = 'data:image/svg+xml;charset=UTF-8,%3csvg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="%23facc15"%3e%3cpath stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /%3e%3cpath stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /%3e%3c/svg%3e';
 
@@ -480,15 +487,25 @@
         function renderTable(data) {
             const container = document.getElementById('dataTableBody');
             const counter = document.getElementById('resultCounter');
-            counter.textContent = data.length;
+
+            // Aplicar filtro de modo de visualização
+            let filteredData = data;
+            if (currentViewMode === 'mensalistas') {
+                filteredData = data.filter(item => (item.categoria || '') === 'MENSALISTA');
+                document.getElementById('viewModeFilter').classList.remove('hidden');
+            } else {
+                document.getElementById('viewModeFilter').classList.add('hidden');
+            }
+
+            counter.textContent = filteredData.length;
             container.innerHTML = '';
 
-            if (data.length === 0) {
-                container.innerHTML = '<tr><td class="p-10 text-center text-slate-400 uppercase font-bold text-xs">Nenhum registro na base</td></tr>';
+            if (filteredData.length === 0) {
+                container.innerHTML = '<tr><td class="p-10 text-center text-slate-400 uppercase font-bold text-xs">Nenhum registro encontrado</td></tr>';
                 return;
             }
 
-            data.forEach(item => {
+            filteredData.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.className = "cursor-pointer transition-colors group";
                 const photo = item.coluna_c || DEFAULT_PHOTO;
@@ -790,6 +807,7 @@
             }
 
             if (!hasError) {
+                currentViewMode = 'all';
                 finishImport();
             } else {
                 updateLoadingStrip("", false);
@@ -851,6 +869,7 @@
                 }
 
                 if (!hasError) {
+                    currentViewMode = 'mensalistas';
                     finishImport();
                 } else {
                     showToast("ERRO AO ATUALIZAR MENSALISTAS");
@@ -919,6 +938,11 @@
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
         function openUploadModal() { document.getElementById('uploadModal').classList.remove('hidden'); }
         function showConfirmDeleteModal() { document.getElementById('confirmDeleteModal').classList.remove('hidden'); }
+
+        function resetViewMode() {
+            currentViewMode = 'all';
+            renderTable(allData);
+        }
         function zoomPhoto(src) {
             if (src === DEFAULT_PHOTO) return;
             document.getElementById('zoomedImg').src = src;
