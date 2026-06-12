@@ -344,7 +344,7 @@
             while (hasMore) {
                 const { data, error } = await supabaseClient
                     .from('Estacionamento')
-                    .select('id, coluna_a, coluna_b, coluna_d, data_criacao, data_importacao')
+                    .select('id, coluna_a, coluna_b, coluna_d, data_criacao, categoria')
                     .eq('Ativo', true)
                     .order('coluna_b', { ascending: true })
                     .order('id', { ascending: true }) // Ordenação secundária estável para paginação
@@ -470,7 +470,7 @@
                     }
                 }
 
-                const isMensalista = item.data_importacao === 'MENSALISTA';
+                const isMensalista = (item.categoria || '') === 'MENSALISTA';
                 const mensalistaBadge = isMensalista ? '<span class="text-[8px] bg-yellow-400 text-black px-1.5 py-0.5 rounded-full font-black ml-2 align-middle">MENSALISTA</span>' : '';
 
                 tr.innerHTML = `
@@ -507,7 +507,7 @@
             document.getElementById('detInfo').textContent = item.coluna_d || 'Não Informado';
 
             const catEl = document.getElementById('detCat');
-            if (item.data_importacao === 'MENSALISTA') {
+            if ((item.categoria || '') === 'MENSALISTA') {
                 catEl.textContent = 'MENSALISTA';
                 catEl.className = 'text-base font-bold uppercase text-yellow-600';
             } else {
@@ -668,7 +668,7 @@
                 coluna_a: r[0] ? String(r[0]).trim() : null,
                 coluna_b: `${r[1] || ''} ${r[2] || ''}`.trim() || 'Sem Nome',
                 coluna_d: r[4] ? String(r[4]).trim() : "GERAL",
-                data_importacao: 'NORMAL',
+                categoria: 'NORMAL',
                 Ativo: true
             })).filter(i => i.coluna_a);
 
@@ -759,7 +759,7 @@
             // 1. Resetar todos para NORMAL
             const { error: resetError } = await supabaseClient
                 .from('Estacionamento')
-                .update({ data_importacao: 'NORMAL' })
+                .update({ categoria: 'NORMAL' })
                 .eq('Ativo', true);
 
             if (resetError) {
@@ -782,7 +782,7 @@
                     const chunk = idsParaAtualizar.slice(i, i + chunkSize);
                     const { error } = await supabaseClient
                         .from('Estacionamento')
-                        .update({ data_importacao: 'MENSALISTA' })
+                        .update({ categoria: 'MENSALISTA' })
                         .in('id', chunk);
                     if (error) hasError = true;
                 }
