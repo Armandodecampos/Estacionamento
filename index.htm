@@ -315,12 +315,25 @@
                     supabaseClient = window.supabase.createClient(_SUPABASE_URL, _SUPABASE_KEY);
                 }
 
-                // Detectar colunas disponíveis
+                // Detectar colunas disponíveis de forma robusta (funciona mesmo se a tabela estiver vazia)
+                availableColumns = [];
+                const checkCols = ['id', 'coluna_a', 'coluna_b', 'coluna_c', 'coluna_d', 'categoria', 'data_criacao', 'Ativo'];
+
+                // Fazemos uma query pedindo apenas os nomes das colunas
                 const { data, error } = await supabaseClient.from('Estacionamento').select('*').limit(1);
-                if (!error && data && data.length > 0) {
-                    availableColumns = Object.keys(data[0]);
+
+                if (!error) {
+                    if (data && data.length > 0) {
+                        availableColumns = Object.keys(data[0]);
+                    } else {
+                        // Se estiver vazio, testamos as colunas principais uma a uma
+                        for (const col of checkCols) {
+                            const { error: colErr } = await supabaseClient.from('Estacionamento').select(col).limit(0);
+                            if (!colErr) availableColumns.push(col);
+                        }
+                    }
                     checkSchemaWarnings();
-                } else if (error) {
+                } else {
                     console.error("Erro ao detectar esquema:", error);
                 }
             } catch (e) {
