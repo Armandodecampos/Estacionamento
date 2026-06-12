@@ -178,7 +178,8 @@
                 <span id="clearSearch" class="text-slate-400 hover:text-slate-900 text-2xl">&times;</span>
             </div>
 
-            <div id="uploadSection" class="hidden flex gap-2">
+            <div id="uploadSection" class="hidden flex items-center gap-2">
+                <div id="schemaWarning" class="hidden text-red-400 text-[9px] font-bold uppercase animate-pulse mr-2 border border-red-900/50 p-1 rounded bg-red-950/20">Esquema Desatualizado</div>
                 <button onclick="showConfirmDeleteModal()" class="bg-red-600 hover:bg-red-700 text-white p-3 rounded-xl border border-red-900 shadow-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 </button>
@@ -300,21 +301,42 @@
         let allData = [];
         let isAdmin = false;
         let selectedItem = null;
+        let availableColumns = [];
 
         const DEFAULT_PHOTO = 'data:image/svg+xml;charset=UTF-8,%3csvg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="%23facc15"%3e%3cpath stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /%3e%3cpath stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /%3e%3c/svg%3e';
 
-        function initSupabase() {
+        async function initSupabase() {
             try {
                 if (!supabaseClient) {
                     supabaseClient = window.supabase.createClient(_SUPABASE_URL, _SUPABASE_KEY);
+                }
+
+                // Detectar colunas disponíveis
+                const { data, error } = await supabaseClient.from('Estacionamento').select('*').limit(1);
+                if (!error && data && data.length > 0) {
+                    availableColumns = Object.keys(data[0]);
+                    checkSchemaWarnings();
+                } else if (error) {
+                    console.error("Erro ao detectar esquema:", error);
                 }
             } catch (e) {
                 console.error("Erro ao inicializar Supabase:", e);
             }
         }
 
+        function checkSchemaWarnings() {
+            const hasCategoria = availableColumns.includes('categoria');
+            const warnEl = document.getElementById('schemaWarning');
+            if (!hasCategoria) {
+                if (isAdmin && warnEl) warnEl.classList.remove('hidden');
+                console.warn("AVISO: COLUNA 'CATEGORIA' NÃO DETECTADA NO BANCO");
+            } else {
+                if (warnEl) warnEl.classList.add('hidden');
+            }
+        }
+
         window.onload = async () => {
-            initSupabase();
+            await initSupabase();
             checkSession();
             fetchData();
             fetchLastUpdate();
@@ -337,10 +359,14 @@
 
             updateLoadingStrip("CARREGANDO DADOS...", true);
 
+            const columnsToSelect = ['id', 'coluna_a', 'coluna_b', 'data_criacao'];
+            if (availableColumns.includes('coluna_d')) columnsToSelect.push('coluna_d');
+            if (availableColumns.includes('categoria')) columnsToSelect.push('categoria');
+
             while (hasMore) {
                 const { data, error } = await supabaseClient
                     .from('Estacionamento')
-                    .select('id, coluna_a, coluna_b, coluna_d, data_criacao, categoria')
+                    .select(columnsToSelect.join(','))
                     .eq('Ativo', true)
                     .order('coluna_b', { ascending: true })
                     .order('id', { ascending: true }) // Ordenação secundária estável para paginação
@@ -660,13 +686,19 @@
         }
 
         async function handleBaseImport(rows) {
-            const formatted = rows.map(r => ({
-                coluna_a: r[0] ? String(r[0]).trim() : null,
-                coluna_b: `${r[1] || ''} ${r[2] || ''}`.trim() || 'Sem Nome',
-                coluna_d: r[4] ? String(r[4]).trim() : "GERAL",
-                categoria: 'NORMAL',
-                Ativo: true
-            })).filter(i => i.coluna_a);
+            const hasCategoria = availableColumns.includes('categoria');
+            const hasColunaD = availableColumns.includes('coluna_d');
+
+            const formatted = rows.map(r => {
+                const item = {
+                    coluna_a: r[0] ? String(r[0]).trim() : null,
+                    coluna_b: `${r[1] || ''} ${r[2] || ''}`.trim() || 'Sem Nome',
+                    Ativo: true
+                };
+                if (hasColunaD) item.coluna_d = r[4] ? String(r[4]).trim() : "GERAL";
+                if (hasCategoria) item.categoria = 'NORMAL';
+                return item;
+            }).filter(i => i.coluna_a);
 
             if (formatted.length === 0) {
                 showToast("ARQUIVO VAZIO OU INVÁLIDO");
@@ -757,6 +789,11 @@
 
             if (mensalistasNomes.length === 0) {
                 showToast("NENHUM NOME ENCONTRADO NA COLUNA B");
+                return;
+            }
+
+            if (!availableColumns.includes('categoria')) {
+                alert("ERRO: A coluna 'categoria' não existe no banco de dados. Execute o script SQL no Supabase primeiro:\n\nALTER TABLE \"Estacionamento\" ADD COLUMN categoria TEXT DEFAULT 'NORMAL';");
                 return;
             }
 
