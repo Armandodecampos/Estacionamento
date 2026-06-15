@@ -155,10 +155,23 @@
 
     <!-- Barra de Estado -->
     <div class="status-bar text-[10px] sm:text-xs">
-        <div class="flex items-center gap-4">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
             <div class="flex items-center gap-2 text-slate-900 italic">
                 <span class="not-italic font-bold">BASE ATUALIZADA EM:</span>
                 <span id="lastUpdateDate" class="font-mono">---</span>
+            </div>
+
+            <div id="fileInfoSection" class="flex items-center gap-4 border-l-2 border-slate-400 pl-4 hidden">
+                <div id="baseFileInfo" class="hidden flex items-center gap-1.5 bg-slate-800 text-white px-2 py-0.5 rounded shadow-sm">
+                    <span class="text-[8px] opacity-70">BASE:</span>
+                    <span id="baseFileName" class="max-w-[80px] truncate font-bold uppercase">---</span>
+                    <button onclick="removeBaseFile()" class="hover:text-red-400 transition-colors">&times;</button>
+                </div>
+                <div id="mensalistaFileInfo" class="hidden flex items-center gap-1.5 bg-yellow-400 text-black px-2 py-0.5 rounded shadow-sm">
+                    <span class="text-[8px] opacity-70">FILTRO:</span>
+                    <span id="mensalistaFileName" class="max-w-[80px] truncate font-bold uppercase">---</span>
+                    <button onclick="removeMensalistaFile()" class="hover:text-red-700 transition-colors">&times;</button>
+                </div>
             </div>
         </div>
         <div class="flex items-center gap-2 text-slate-900">
@@ -407,8 +420,44 @@
 
         async function fetchLastUpdate() {
             if (!supabaseClient) return;
-            const { data } = await supabaseClient.from('sistema_config').select('valor').eq('chave', 'ultima_atualizacao').single();
-            if (data) document.getElementById('lastUpdateDate').textContent = data.valor;
+
+            // Buscar data de atualização
+            const { data: updateData } = await supabaseClient.from('sistema_config').select('valor').eq('chave', 'ultima_atualizacao').single();
+            if (updateData) document.getElementById('lastUpdateDate').textContent = updateData.valor;
+
+            // Buscar nomes dos arquivos
+            const { data: configData } = await supabaseClient.from('sistema_config').select('*').in('chave', ['nome_arquivo_base', 'nome_arquivo_mensalista']);
+
+            if (configData) {
+                const baseFile = configData.find(c => c.chave === 'nome_arquivo_base')?.valor || '---';
+                const mensalistaFile = configData.find(c => c.chave === 'nome_arquivo_mensalista')?.valor || '---';
+
+                const baseEl = document.getElementById('baseFileName');
+                const mensaEl = document.getElementById('mensalistaFileName');
+                const section = document.getElementById('fileInfoSection');
+                const baseInfo = document.getElementById('baseFileInfo');
+                const mensaInfo = document.getElementById('mensalistaFileInfo');
+
+                if (baseFile !== '---') {
+                    baseEl.textContent = baseFile;
+                    baseInfo.classList.remove('hidden');
+                    section.classList.remove('hidden');
+                } else {
+                    baseInfo.classList.add('hidden');
+                }
+
+                if (mensalistaFile !== '---') {
+                    mensaEl.textContent = mensalistaFile;
+                    mensaInfo.classList.remove('hidden');
+                    section.classList.remove('hidden');
+                } else {
+                    mensaInfo.classList.add('hidden');
+                }
+
+                if (baseFile === '---' && mensalistaFile === '---') {
+                    section.classList.add('hidden');
+                }
+            }
         }
 
         async function loadPhotos() {
@@ -693,15 +742,15 @@
                 const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, range: 2 });
 
                 if (importType === 'base') {
-                    await handleBaseImport(rows);
+                    await handleBaseImport(rows, file.name);
                 } else {
-                    await handleMensalistaImport(rows);
+                    await handleMensalistaImport(rows, file.name);
                 }
             };
             reader.readAsArrayBuffer(file);
         }
 
-        async function handleBaseImport(rows) {
+        async function handleBaseImport(rows, filename) {
             const hasCategoria = availableColumns.includes('categoria');
             const hasColunaD = availableColumns.includes('coluna_d');
 
@@ -800,6 +849,7 @@
             }
 
             if (!hasError) {
+                if (filename) await supabaseClient.from('sistema_config').upsert({ chave: 'nome_arquivo_base', valor: filename });
                 finishImport();
             } else {
                 updateLoadingStrip("", false);
@@ -807,11 +857,13 @@
             }
         }
 
-        async function handleMensalistaImport(rows) {
-            const mensalistasNomes = rows.map(r => normalizeString(r[1])).filter(n => n);
+        async function handleMensalistaImport(rows, filename) {
+            // Coluna B a partir da linha 3 -> r[1].trim()
+            // Comparamos r[1] do arquivo com coluna_a do banco (ID)
+            const mensalistasIDs = rows.map(r => r[1] ? String(r[1]).trim() : null).filter(id => id);
 
-            if (mensalistasNomes.length === 0) {
-                showToast("NENHUM NOME ENCONTRADO NA COLUNA B");
+            if (mensalistasIDs.length === 0) {
+                showToast("NENHUM ID ENCONTRADO NA COLUNA B");
                 return;
             }
 
@@ -831,7 +883,7 @@
             while (hasMore) {
                 const { data, error } = await supabaseClient
                     .from('Estacionamento')
-                    .select('id, coluna_b')
+                    .select('id, coluna_a')
                     .range(from, from + fetchStep - 1);
 
                 if (error) {
@@ -847,11 +899,11 @@
 
             // 2. Identificar IDs que devem ser ativados (mensalistas) e desativados
             const idsParaAtivar = allDatabaseRecords
-                .filter(item => mensalistasNomes.includes(normalizeString(item.coluna_b)))
+                .filter(item => mensalistasIDs.includes(String(item.coluna_a).trim()))
                 .map(item => item.id);
 
             const idsParaDesativar = allDatabaseRecords
-                .filter(item => !mensalistasNomes.includes(normalizeString(item.coluna_b)))
+                .filter(item => !mensalistasIDs.includes(String(item.coluna_a).trim()))
                 .map(item => item.id);
 
             let hasError = false;
@@ -890,6 +942,7 @@
             }
 
             if (!hasError) {
+                if (filename) await supabaseClient.from('sistema_config').upsert({ chave: 'nome_arquivo_mensalista', valor: filename });
                 finishImport();
             } else {
                 updateLoadingStrip("", false);
@@ -901,6 +954,7 @@
             const now = new Date().toLocaleDateString('pt-BR');
             await supabaseClient.from('sistema_config').upsert({ chave: 'ultima_atualizacao', valor: now });
             document.getElementById('lastUpdateDate').textContent = now;
+            await fetchLastUpdate();
             updateLoadingStrip("", false);
             showToast("SINCRONIZAÇÃO CONCLUÍDA");
             closeModal('uploadModal');
@@ -955,6 +1009,30 @@
         function openUploadModal() { document.getElementById('uploadModal').classList.remove('hidden'); }
         function showConfirmDeleteModal() { document.getElementById('confirmDeleteModal').classList.remove('hidden'); }
 
+        async function removeBaseFile() {
+            if (!isAdmin || !confirm("Remover arquivo BASE desativará todos os registros. Continuar?")) return;
+            updateLoadingStrip("LIMPANDO BASE...", true);
+            const { error } = await supabaseClient.from('Estacionamento').update({ Ativo: false }).neq('id', 0);
+            if (!error) {
+                await supabaseClient.from('sistema_config').upsert({ chave: 'nome_arquivo_base', valor: '---' });
+                await supabaseClient.from('sistema_config').upsert({ chave: 'nome_arquivo_mensalista', valor: '---' });
+                fetchData();
+                fetchLastUpdate();
+                showToast("BASE REMOVIDA");
+            }
+        }
+
+        async function removeMensalistaFile() {
+            if (!isAdmin || !confirm("Remover filtro de mensalistas restaurará a visibilidade de todos?")) return;
+            updateLoadingStrip("RESTAURANDO REGISTROS...", true);
+            const { error } = await supabaseClient.from('Estacionamento').update({ Ativo: true, categoria: 'NORMAL' }).neq('id', 0);
+            if (!error) {
+                await supabaseClient.from('sistema_config').upsert({ chave: 'nome_arquivo_mensalista', valor: '---' });
+                fetchData();
+                fetchLastUpdate();
+                showToast("FILTRO REMOVIDO");
+            }
+        }
 
         function zoomPhoto(src) {
             if (src === DEFAULT_PHOTO) return;
