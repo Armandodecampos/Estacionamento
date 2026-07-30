@@ -114,26 +114,6 @@
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
-        .novo-badge {
-            position: absolute;
-            top: -8px;
-            left: -8px;
-            background: #facc15;
-            color: #000;
-            font-weight: 900;
-            font-size: 8px;
-            width: 36px;
-            height: 36px;
-            z-index: 10;
-            clip-path: polygon(50% 0%, 61% 10%, 75% 5%, 80% 18%, 94% 20%, 90% 34%, 100% 43%, 92% 56%, 98% 70%, 85% 75%, 80% 89%, 67% 88%, 59% 100%, 46% 91%, 32% 98%, 25% 85%, 11% 88%, 10% 74%, 0% 67%, 8% 54%, 2% 40%, 15% 35%, 15% 20%, 29% 18%, 35% 5%, 46% 13%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-transform: uppercase;
-            line-height: 1;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
     </style>
 </head>
 <body class="font-sans text-sm">
@@ -163,14 +143,9 @@
 
             <div id="fileInfoSection" class="flex items-center gap-4 border-l-2 border-slate-400 pl-4 hidden">
                 <div id="baseFileInfo" class="hidden flex items-center gap-1.5 bg-slate-800 text-white px-2 py-0.5 rounded shadow-sm">
-                    <span class="text-[8px] opacity-70">BASE:</span>
+                    <span class="text-[8px] opacity-70">ARQUIVO:</span>
                     <span id="baseFileName" class="max-w-[80px] truncate font-bold uppercase">---</span>
                     <button onclick="removeBaseFile()" class="hover:text-red-400 transition-colors">&times;</button>
-                </div>
-                <div id="mensalistaFileInfo" class="hidden flex items-center gap-1.5 bg-yellow-400 text-black px-2 py-0.5 rounded shadow-sm">
-                    <span class="text-[8px] opacity-70">FILTRO:</span>
-                    <span id="mensalistaFileName" class="max-w-[80px] truncate font-bold uppercase">---</span>
-                    <button onclick="removeMensalistaFile()" class="hover:text-red-700 transition-colors">&times;</button>
                 </div>
             </div>
         </div>
@@ -230,10 +205,9 @@
                 </div>
             </div>
             <div class="space-y-4">
-                <div><label class="text-[10px] text-slate-500 uppercase font-bold">Documento / ID</label><p id="detId" class="text-lg font-mono text-slate-800 font-bold"></p></div>
-                <div><label class="text-[10px] text-slate-500 uppercase font-bold">Nome Completo</label><p id="detNome" class="text-xl text-slate-900 font-bold"></p></div>
-                <div><label class="text-[10px] text-slate-500 uppercase font-bold">Vínculo / Setor</label><p id="detInfo" class="text-base text-slate-700 italic"></p></div>
-                <div><label class="text-[10px] text-slate-500 uppercase font-bold">Categoria</label><p id="detCat" class="text-base font-bold uppercase"></p></div>
+                <div><label class="text-[10px] text-slate-500 uppercase font-bold">ID Pessoal</label><p id="detId" class="text-lg font-mono text-slate-800 font-bold"></p></div>
+                <div><label class="text-[10px] text-slate-500 uppercase font-bold">Nome</label><p id="detNome" class="text-xl text-slate-900 font-bold"></p></div>
+                <div><label class="text-[10px] text-slate-500 uppercase font-bold">Sobrenome</label><p id="detInfo" class="text-base text-slate-700 font-bold uppercase"></p></div>
             </div>
             <button onclick="closeModal('detailsModal')" class="w-full mt-6 bg-slate-900 hover:bg-black text-white py-3 rounded-xl font-bold uppercase shadow-md">Voltar</button>
         </div>
@@ -267,22 +241,10 @@
         <div class="bg-slate-100 p-6 rounded-2xl shadow-2xl w-full max-w-sm border-2 border-slate-900">
             <h3 class="text-lg mb-4 text-center text-slate-900 uppercase font-bold">Importar Excel</h3>
 
-            <div class="flex flex-col gap-2 mb-4">
-                <label class="flex items-center gap-2 cursor-pointer bg-white p-3 rounded-lg border border-slate-300 hover:bg-yellow-50 transition-colors">
-                    <input type="radio" name="importType" value="base" checked class="w-4 h-4 text-slate-900 focus:ring-yellow-400">
-                    <div class="flex flex-col">
-                        <span class="text-xs font-bold uppercase text-slate-900">Base de Dados</span>
-                        <span class="text-[9px] text-slate-500">Cadastros completos (Colunas A, B, C, E)</span>
-                    </div>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer bg-white p-3 rounded-lg border border-slate-300 hover:bg-yellow-50 transition-colors">
-                    <input type="radio" name="importType" value="mensalistas" class="w-4 h-4 text-slate-900 focus:ring-yellow-400">
-                    <div class="flex flex-col">
-                        <span class="text-xs font-bold uppercase text-slate-900">Lista de Mensalistas</span>
-                        <span class="text-[9px] text-slate-500">Filtrar mensalistas (Coluna B)</span>
-                    </div>
-                </label>
-            </div>
+            <p class="text-xs text-slate-600 mb-4 text-center">
+                Selecione uma planilha contendo as colunas:<br>
+                <strong>A (ID Pessoal)</strong>, <strong>B (Nome)</strong> e <strong>C (Sobrenome)</strong>.
+            </p>
 
             <input type="file" id="excelInput" accept=".xlsx, .xls" class="mb-4 block w-full text-xs bg-white p-2 border border-slate-300">
             <button onclick="processExcel()" id="processBtn" class="w-full bg-slate-900 text-white p-3 rounded-lg font-bold uppercase shadow-md">Processar Arquivo</button>
@@ -425,18 +387,15 @@
             const { data: updateData } = await supabaseClient.from('sistema_config').select('valor').eq('chave', 'ultima_atualizacao').single();
             if (updateData) document.getElementById('lastUpdateDate').textContent = updateData.valor;
 
-            // Buscar nomes dos arquivos
-            const { data: configData } = await supabaseClient.from('sistema_config').select('*').in('chave', ['nome_arquivo_base', 'nome_arquivo_mensalista']);
+            // Buscar nome do arquivo
+            const { data: configData } = await supabaseClient.from('sistema_config').select('*').in('chave', ['nome_arquivo_base']);
 
             if (configData) {
                 const baseFile = configData.find(c => c.chave === 'nome_arquivo_base')?.valor || '---';
-                const mensalistaFile = configData.find(c => c.chave === 'nome_arquivo_mensalista')?.valor || '---';
 
                 const baseEl = document.getElementById('baseFileName');
-                const mensaEl = document.getElementById('mensalistaFileName');
                 const section = document.getElementById('fileInfoSection');
                 const baseInfo = document.getElementById('baseFileInfo');
-                const mensaInfo = document.getElementById('mensalistaFileInfo');
 
                 if (baseFile !== '---') {
                     baseEl.textContent = baseFile;
@@ -444,17 +403,6 @@
                     section.classList.remove('hidden');
                 } else {
                     baseInfo.classList.add('hidden');
-                }
-
-                if (mensalistaFile !== '---') {
-                    mensaEl.textContent = mensalistaFile;
-                    mensaInfo.classList.remove('hidden');
-                    section.classList.remove('hidden');
-                } else {
-                    mensaInfo.classList.add('hidden');
-                }
-
-                if (baseFile === '---' && mensalistaFile === '---') {
                     section.classList.add('hidden');
                 }
             }
@@ -546,38 +494,22 @@
                 const photo = item.coluna_c || DEFAULT_PHOTO;
                 const paddingClass = item.coluna_c ? "" : "p-2";
 
-                // Lógica de 7 dias para o selo NOVO
-                let novoBadge = '';
-                if (item.data_criacao) {
-                    const dataCriacao = new Date(item.data_criacao);
-                    const hoje = new Date();
-                    const diffDias = Math.floor((hoje - dataCriacao) / (1000 * 60 * 60 * 24));
-                    if (diffDias < 7) {
-                        novoBadge = '<div class="novo-badge">NOVO</div>';
-                    }
-                }
-
-                const isMensalista = (item.categoria || '') === 'MENSALISTA';
-                const mensalistaBadge = isMensalista ? '<span class="text-[8px] bg-yellow-400 text-black px-1.5 py-0.5 rounded-full font-black ml-2 align-middle">MENSALISTA</span>' : '';
-
                 tr.innerHTML = `
                     <td class="p-4 flex justify-between items-center gap-4 border-b border-slate-300">
                         <div class="flex items-center gap-4 min-w-0">
                             <div class="relative">
-                                ${novoBadge}
                                 <img src="${photo}" data-id="${item.id}" class="user-thumb shadow-md group-hover:scale-110 transition-transform ${paddingClass}">
                             </div>
                             <div class="min-w-0">
                                 <div class="text-slate-900 font-bold uppercase break-all text-sm">
                                     ${item.coluna_b}
-                                    ${mensalistaBadge}
                                 </div>
                                 <div class="text-[10px] text-slate-500 font-mono">${item.coluna_a}</div>
                             </div>
                         </div>
                         <div class="flex-shrink-0">
                             <span class="text-[9px] bg-slate-200 text-slate-700 px-2 py-1 rounded font-bold uppercase group-hover:bg-slate-900 group-hover:text-yellow-400 transition-colors">
-                                ${item.coluna_d || 'GERAL'}
+                                ${item.coluna_d || ''}
                             </span>
                         </div>
                     </td>
@@ -591,16 +523,7 @@
             selectedItem = item;
             document.getElementById('detId').textContent = item.coluna_a;
             document.getElementById('detNome').textContent = item.coluna_b;
-            document.getElementById('detInfo').textContent = item.coluna_d || 'Não Informado';
-
-            const catEl = document.getElementById('detCat');
-            if ((item.categoria || '') === 'MENSALISTA') {
-                catEl.textContent = 'MENSALISTA';
-                catEl.className = 'text-base font-bold uppercase text-yellow-600';
-            } else {
-                catEl.textContent = 'NORMAL';
-                catEl.className = 'text-base font-bold uppercase text-slate-500';
-            }
+            document.getElementById('detInfo').textContent = item.coluna_d ? String(item.coluna_d).toUpperCase() : '';
 
             const photoEl = document.getElementById('detPhoto');
             const photo = item.coluna_c || DEFAULT_PHOTO;
@@ -730,7 +653,6 @@
 
         async function processExcel() {
             const file = document.getElementById('excelInput').files[0];
-            const importType = document.querySelector('input[name="importType"]:checked').value;
 
             if (!file || !supabaseClient) return;
 
@@ -739,13 +661,10 @@
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
                 const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, range: 2 });
+                // range: 1 parses starting from the second row (first data row after headers)
+                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, range: 1 });
 
-                if (importType === 'base') {
-                    await handleBaseImport(rows, file.name);
-                } else {
-                    await handleMensalistaImport(rows, file.name);
-                }
+                await handleBaseImport(rows, file.name);
             };
             reader.readAsArrayBuffer(file);
         }
@@ -757,10 +676,10 @@
             const formatted = rows.map(r => {
                 const item = {
                     coluna_a: r[0] ? String(r[0]).trim() : null,
-                    coluna_b: `${r[1] || ''} ${r[2] || ''}`.trim() || 'Sem Nome',
+                    coluna_b: r[1] ? String(r[1]).trim() : 'Sem Nome',
                     Ativo: true
                 };
-                if (hasColunaD) item.coluna_d = r[4] ? String(r[4]).trim() : "GERAL";
+                if (hasColunaD) item.coluna_d = r[2] ? String(r[2]).trim() : "";
                 if (hasCategoria) item.categoria = 'NORMAL';
                 return item;
             }).filter(i => i.coluna_a);
@@ -772,7 +691,7 @@
 
             updateLoadingStrip("SINCRONIZANDO BASE...", true);
 
-            // Busca IDs e datas de criação atuais
+            // Busca todos os registros Ativos atualmente para desativar os que não vieram no novo arquivo
             let currentRecordsMap = new Map();
             let from = 0;
             const fetchStep = 1000;
@@ -796,7 +715,7 @@
                 from += fetchStep;
             }
 
-            // Identifica novos registros e preserva data_criacao dos existentes
+            // Preserva data_criacao dos existentes ou define como agora para novos
             const now = new Date().toISOString();
             formatted.forEach(item => {
                 if (currentRecordsMap.has(item.coluna_a)) {
@@ -812,7 +731,7 @@
 
             let hasError = false;
 
-            // 1. Desativar registros que saíram do Excel
+            // 1. Desativar registros que saíram do Excel (ou todos os anteriores que não estão presentes)
             const chunkSize = 100;
             for (let i = 0; i < idsToDeactivate.length; i += chunkSize) {
                 const chunk = idsToDeactivate.slice(i, i + chunkSize);
@@ -825,12 +744,11 @@
                 }
             }
 
-            // 2. Sincronizar registros do Excel
+            // 2. Sincronizar registros do Excel (Adiciona/re-ativa)
             if (!hasError) {
                 for (let i = 0; i < formatted.length; i += chunkSize) {
                     const chunk = formatted.slice(i, i + chunkSize);
 
-                    // Garantir que todos na base importada sejam 'NORMAL' por padrão (reset do filtro anterior)
                     chunk.forEach(item => {
                         if (hasCategoria) item.categoria = 'NORMAL';
                         item.Ativo = true;
@@ -854,99 +772,6 @@
             } else {
                 updateLoadingStrip("", false);
                 showToast("ERRO NA SINCRONIZAÇÃO");
-            }
-        }
-
-        async function handleMensalistaImport(rows, filename) {
-            // Coluna B a partir da linha 3 -> r[1].trim()
-            // Comparamos r[1] do arquivo com coluna_a do banco (ID)
-            const mensalistasIDs = rows.map(r => r[1] ? String(r[1]).trim() : null).filter(id => id);
-
-            if (mensalistasIDs.length === 0) {
-                showToast("NENHUM ID ENCONTRADO NA COLUNA B");
-                return;
-            }
-
-            if (!availableColumns.includes('categoria')) {
-                alert("ERRO: A coluna 'categoria' não existe no banco de dados. Execute o script SQL no Supabase primeiro:\n\nALTER TABLE \"Estacionamento\" ADD COLUMN categoria TEXT DEFAULT 'NORMAL';");
-                return;
-            }
-
-            updateLoadingStrip("FILTRANDO MENSALISTAS...", true);
-
-            // 1. Buscar todos os registros do banco (incluindo inativos) para o cruzamento
-            let allDatabaseRecords = [];
-            let from = 0;
-            const fetchStep = 1000;
-            let hasMore = true;
-
-            while (hasMore) {
-                const { data, error } = await supabaseClient
-                    .from('Estacionamento')
-                    .select('id, coluna_a')
-                    .range(from, from + fetchStep - 1);
-
-                if (error) {
-                    showToast("ERRO AO BUSCAR DADOS PARA FILTRO");
-                    updateLoadingStrip("", false);
-                    return;
-                }
-
-                allDatabaseRecords = allDatabaseRecords.concat(data);
-                if (data.length < fetchStep) hasMore = false;
-                from += fetchStep;
-            }
-
-            // 2. Identificar IDs que devem ser ativados (mensalistas) e desativados
-            const idsParaAtivar = allDatabaseRecords
-                .filter(item => mensalistasIDs.includes(String(item.coluna_a).trim()))
-                .map(item => item.id);
-
-            const idsParaDesativar = allDatabaseRecords
-                .filter(item => !mensalistasIDs.includes(String(item.coluna_a).trim()))
-                .map(item => item.id);
-
-            let hasError = false;
-            const chunkSize = 100;
-
-            // 3. Desativar quem NÃO está na lista e resetar categoria
-            for (let i = 0; i < idsParaDesativar.length; i += chunkSize) {
-                const chunk = idsParaDesativar.slice(i, i + chunkSize);
-                const { error } = await supabaseClient
-                    .from('Estacionamento')
-                    .update({ Ativo: false, categoria: 'NORMAL' })
-                    .in('id', chunk);
-                if (error) {
-                    console.error(error);
-                    alert("Erro ao desativar não-mensalistas: " + error.message);
-                    hasError = true;
-                    break;
-                }
-            }
-
-            // 4. Ativar quem ESTÁ na lista e marcar como MENSALISTA
-            if (!hasError && idsParaAtivar.length > 0) {
-                for (let i = 0; i < idsParaAtivar.length; i += chunkSize) {
-                    const chunk = idsParaAtivar.slice(i, i + chunkSize);
-                    const { error } = await supabaseClient
-                        .from('Estacionamento')
-                        .update({ Ativo: true, categoria: 'MENSALISTA' })
-                        .in('id', chunk);
-                    if (error) {
-                        console.error(error);
-                        alert("Erro ao ativar mensalistas: " + error.message);
-                        hasError = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!hasError) {
-                if (filename) await supabaseClient.from('sistema_config').upsert({ chave: 'nome_arquivo_mensalista', valor: filename });
-                finishImport();
-            } else {
-                updateLoadingStrip("", false);
-                showToast("ERRO NO FILTRO DE MENSALISTAS");
             }
         }
 
@@ -1010,27 +835,14 @@
         function showConfirmDeleteModal() { document.getElementById('confirmDeleteModal').classList.remove('hidden'); }
 
         async function removeBaseFile() {
-            if (!isAdmin || !confirm("Remover arquivo BASE desativará todos os registros. Continuar?")) return;
+            if (!isAdmin || !confirm("Remover arquivo desativará todos os registros. Continuar?")) return;
             updateLoadingStrip("LIMPANDO BASE...", true);
             const { error } = await supabaseClient.from('Estacionamento').update({ Ativo: false }).neq('id', 0);
             if (!error) {
                 await supabaseClient.from('sistema_config').upsert({ chave: 'nome_arquivo_base', valor: '---' });
-                await supabaseClient.from('sistema_config').upsert({ chave: 'nome_arquivo_mensalista', valor: '---' });
                 fetchData();
                 fetchLastUpdate();
-                showToast("BASE REMOVIDA");
-            }
-        }
-
-        async function removeMensalistaFile() {
-            if (!isAdmin || !confirm("Remover filtro de mensalistas restaurará a visibilidade de todos?")) return;
-            updateLoadingStrip("RESTAURANDO REGISTROS...", true);
-            const { error } = await supabaseClient.from('Estacionamento').update({ Ativo: true, categoria: 'NORMAL' }).neq('id', 0);
-            if (!error) {
-                await supabaseClient.from('sistema_config').upsert({ chave: 'nome_arquivo_mensalista', valor: '---' });
-                fetchData();
-                fetchLastUpdate();
-                showToast("FILTRO REMOVIDO");
+                showToast("ARQUIVO REMOVIDO");
             }
         }
 
