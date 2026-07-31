@@ -383,28 +383,48 @@
         async function fetchLastUpdate() {
             if (!supabaseClient) return;
 
-            // Buscar data de atualização
-            const { data: updateData } = await supabaseClient.from('sistema_config').select('valor').eq('chave', 'ultima_atualizacao').single();
-            if (updateData) document.getElementById('lastUpdateDate').textContent = updateData.valor;
+            try {
+                // Buscar data de atualização com query simples sem .single() para evitar HTTP 406 caso não exista
+                const { data: updateData, error: updateError } = await supabaseClient
+                    .from('sistema_config')
+                    .select('valor')
+                    .eq('chave', 'ultima_atualizacao');
 
-            // Buscar nome do arquivo
-            const { data: configData } = await supabaseClient.from('sistema_config').select('*').in('chave', ['nome_arquivo_base']);
-
-            if (configData) {
-                const baseFile = configData.find(c => c.chave === 'nome_arquivo_base')?.valor || '---';
-
-                const baseEl = document.getElementById('baseFileName');
-                const section = document.getElementById('fileInfoSection');
-                const baseInfo = document.getElementById('baseFileInfo');
-
-                if (baseFile !== '---') {
-                    baseEl.textContent = baseFile;
-                    baseInfo.classList.remove('hidden');
-                    section.classList.remove('hidden');
+                if (!updateError && updateData && updateData.length > 0) {
+                    document.getElementById('lastUpdateDate').textContent = updateData[0].valor;
                 } else {
-                    baseInfo.classList.add('hidden');
-                    section.classList.add('hidden');
+                    document.getElementById('lastUpdateDate').textContent = '---';
                 }
+            } catch (err) {
+                console.error("Erro ao buscar ultima_atualizacao:", err);
+                document.getElementById('lastUpdateDate').textContent = '---';
+            }
+
+            try {
+                // Buscar nome do arquivo
+                const { data: configData, error: configError } = await supabaseClient
+                    .from('sistema_config')
+                    .select('*')
+                    .in('chave', ['nome_arquivo_base']);
+
+                if (!configError && configData) {
+                    const baseFile = configData.find(c => c.chave === 'nome_arquivo_base')?.valor || '---';
+
+                    const baseEl = document.getElementById('baseFileName');
+                    const section = document.getElementById('fileInfoSection');
+                    const baseInfo = document.getElementById('baseFileInfo');
+
+                    if (baseFile !== '---') {
+                        baseEl.textContent = baseFile;
+                        baseInfo.classList.remove('hidden');
+                        section.classList.remove('hidden');
+                    } else {
+                        baseInfo.classList.add('hidden');
+                        section.classList.add('hidden');
+                    }
+                }
+            } catch (err) {
+                console.error("Erro ao buscar nome_arquivo_base:", err);
             }
         }
 
