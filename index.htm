@@ -783,7 +783,7 @@
             }
 
             if (!hasError) {
-                if (filename) await supabaseClient.from('sistema_config').upsert({ chave: 'nome_arquivo_base', valor: filename });
+                if (filename) await supabaseClient.from('sistema_config').upsert({ chave: 'nome_arquivo_base', valor: filename }, { onConflict: 'chave' });
                 finishImport();
             } else {
                 updateLoadingStrip("", false);
@@ -793,7 +793,7 @@
 
         async function finishImport() {
             const now = new Date().toLocaleDateString('pt-BR');
-            await supabaseClient.from('sistema_config').upsert({ chave: 'ultima_atualizacao', valor: now });
+            await supabaseClient.from('sistema_config').upsert({ chave: 'ultima_atualizacao', valor: now }, { onConflict: 'chave' });
             document.getElementById('lastUpdateDate').textContent = now;
             await fetchLastUpdate();
             updateLoadingStrip("", false);
@@ -855,7 +855,7 @@
             updateLoadingStrip("LIMPANDO BASE...", true);
             const { error } = await supabaseClient.from('Estacionamento').update({ Ativo: false }).neq('id', 0);
             if (!error) {
-                await supabaseClient.from('sistema_config').upsert({ chave: 'nome_arquivo_base', valor: '---' });
+                await supabaseClient.from('sistema_config').upsert({ chave: 'nome_arquivo_base', valor: '---' }, { onConflict: 'chave' });
                 fetchData();
                 fetchLastUpdate();
                 showToast("ARQUIVO REMOVIDO");
