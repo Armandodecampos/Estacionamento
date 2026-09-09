@@ -170,6 +170,10 @@
 
             <div id="uploadSection" class="hidden flex items-center gap-2">
                 <div id="schemaWarning" class="hidden text-red-400 text-[9px] font-bold uppercase animate-pulse mr-2 border border-red-900/50 p-1 rounded bg-red-950/20">Esquema Desatualizado</div>
+                <button onclick="openAddPersonModal()" class="bg-yellow-500 hover:bg-yellow-600 text-slate-950 px-4 py-3 rounded-xl flex items-center gap-2 border border-yellow-600 font-bold text-xs shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                    <span class="hidden sm:inline">ADICIONAR</span>
+                </button>
                 <button onclick="showConfirmDeleteModal()" class="bg-red-600 hover:bg-red-700 text-white p-3 rounded-xl border border-red-900 shadow-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 </button>
@@ -209,7 +213,30 @@
                 <div><label class="text-[10px] text-slate-500 uppercase font-bold">Nome</label><p id="detNome" class="text-xl text-slate-900 font-bold"></p></div>
                 <div><label class="text-[10px] text-slate-500 uppercase font-bold">Sobrenome</label><p id="detInfo" class="text-base text-slate-700 font-bold uppercase"></p></div>
             </div>
-            <button onclick="closeModal('detailsModal')" class="w-full mt-6 bg-slate-900 hover:bg-black text-white py-3 rounded-xl font-bold uppercase shadow-md">Voltar</button>
+            <button id="adminRemovePersonBtn" onclick="handleRemovePerson()" class="hidden w-full mt-4 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold uppercase shadow-md flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                <span>Remover Pessoa</span>
+            </button>
+            <button onclick="closeModal('detailsModal')" class="w-full mt-3 bg-slate-900 hover:bg-black text-white py-3 rounded-xl font-bold uppercase shadow-md">Voltar</button>
+        </div>
+    </div>
+
+    <!-- Modal Adicionar Pessoa -->
+    <div id="addPersonModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-100 p-6 rounded-2xl shadow-2xl w-full max-w-sm border-2 border-slate-900">
+            <h3 class="text-lg text-slate-900 uppercase font-bold mb-4 border-b-2 border-yellow-400 pb-1">Adicionar Nova Pessoa</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Nome Completo *</label>
+                    <input type="text" id="newPersonName" class="w-full p-3 border border-slate-400 rounded-lg outline-none focus:border-yellow-400 text-slate-900 font-medium" placeholder="Ex: João da Silva">
+                </div>
+                <div>
+                    <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">ID Pessoal *</label>
+                    <input type="text" id="newPersonId" class="w-full p-3 border border-slate-400 rounded-lg outline-none focus:border-yellow-400 text-slate-900 font-mono font-bold" placeholder="Ex: 123456">
+                </div>
+                <button id="addPersonSubmitBtn" onclick="handleAddPerson()" class="w-full bg-slate-900 text-yellow-400 p-3.5 rounded-lg font-bold uppercase shadow-lg hover:bg-black transition-all">Salvar</button>
+                <button onclick="closeModal('addPersonModal')" class="w-full text-slate-500 text-xs py-2">Cancelar</button>
+            </div>
         </div>
     </div>
 
@@ -554,7 +581,88 @@
             const overlay = document.getElementById('adminPhotoOverlay');
             isAdmin ? overlay.classList.remove('hidden') : overlay.classList.add('hidden');
 
+            const removeBtn = document.getElementById('adminRemovePersonBtn');
+            if (removeBtn) {
+                isAdmin ? removeBtn.classList.remove('hidden') : removeBtn.classList.add('hidden');
+            }
+
             document.getElementById('detailsModal').classList.remove('hidden');
+        }
+
+        function openAddPersonModal() {
+            document.getElementById('newPersonName').value = '';
+            document.getElementById('newPersonId').value = '';
+            document.getElementById('addPersonModal').classList.remove('hidden');
+        }
+
+        async function handleAddPerson() {
+            const nameInput = document.getElementById('newPersonName').value.trim();
+            const idInput = document.getElementById('newPersonId').value.trim();
+            const btn = document.getElementById('addPersonSubmitBtn');
+
+            if (!nameInput || !idInput) {
+                showToast("PREENCHA NOME E ID PESSOAL");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = "SALVANDO...";
+
+            const hasCategoria = availableColumns.includes('categoria');
+            const hasColunaD = availableColumns.includes('coluna_d');
+
+            const newRecord = {
+                coluna_a: idInput,
+                coluna_b: nameInput,
+                Ativo: true,
+                data_criacao: new Date().toISOString()
+            };
+
+            if (hasColunaD) newRecord.coluna_d = "";
+            if (hasCategoria) newRecord.categoria = 'NORMAL';
+
+            const { error } = await supabaseClient
+                .from('Estacionamento')
+                .upsert(newRecord, { onConflict: 'coluna_a' });
+
+            btn.disabled = false;
+            btn.textContent = "SALVAR";
+
+            if (error) {
+                console.error("Erro ao adicionar pessoa:", error);
+                alert("Erro ao adicionar pessoa: " + error.message);
+                showToast("ERRO AO SALVAR PESSOA");
+            } else {
+                showToast("PESSOA ADICIONADA COM SUCESSO");
+                closeModal('addPersonModal');
+                fetchData();
+            }
+        }
+
+        async function handleRemovePerson() {
+            if (!selectedItem || !supabaseClient) return;
+
+            const fullName = [selectedItem.coluna_b, selectedItem.coluna_d].filter(Boolean).join(' ').trim();
+            if (!confirm(`Deseja realmente remover ${fullName || selectedItem.coluna_a}?`)) {
+                return;
+            }
+
+            showToast("REMOVENDO...");
+
+            const { error } = await supabaseClient
+                .from('Estacionamento')
+                .update({ Ativo: false })
+                .eq('id', selectedItem.id);
+
+            if (error) {
+                console.error("Erro ao remover pessoa:", error);
+                alert("Erro ao remover pessoa: " + error.message);
+                showToast("ERRO AO REMOVER PESSOA");
+            } else {
+                showToast("PESSOA REMOVIDA COM SUCESSO");
+                closeModal('detailsModal');
+                fetchData();
+            }
         }
 
         async function savePhoto(base64) {
