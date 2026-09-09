@@ -223,8 +223,20 @@
 
     <!-- Modal Adicionar Pessoa -->
     <div id="addPersonModal" class="fixed inset-0 modal-overlay hidden flex items-center justify-center z-50 p-4">
-        <div class="bg-slate-100 p-6 rounded-2xl shadow-2xl w-full max-w-sm border-2 border-slate-900">
+        <div class="bg-slate-100 p-6 rounded-2xl shadow-2xl w-full max-w-sm border-2 border-slate-900 relative">
             <h3 class="text-lg text-slate-900 uppercase font-bold mb-4 border-b-2 border-yellow-400 pb-1">Adicionar Nova Pessoa</h3>
+            <div class="photo-preview-container">
+                <img id="newPersonPhoto" src="" class="user-photo-large shadow-lg p-10" alt="Foto">
+                <div id="newPersonPhotoOverlay" class="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center gap-6 opacity-0 hover:opacity-100 transition-opacity">
+                    <label class="cursor-pointer hover:scale-110 transition-transform" title="Alterar Foto">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        <input type="file" id="newPersonPhotoUpload" class="hidden" accept="image/*" onchange="handleNewPersonPhotoUpload(this)">
+                    </label>
+                    <button onclick="removeNewPersonPhoto()" class="cursor-pointer hover:scale-110 transition-transform text-red-500" title="Remover Foto">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                </div>
+            </div>
             <div class="space-y-4">
                 <div>
                     <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Nome Completo *</label>
@@ -233,13 +245,6 @@
                 <div>
                     <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">ID Pessoal *</label>
                     <input type="text" id="newPersonId" class="w-full p-3 border border-slate-400 rounded-lg outline-none focus:border-yellow-400 text-slate-900 font-mono font-bold" placeholder="Ex: 123456">
-                </div>
-                <div>
-                    <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Foto (Opcional)</label>
-                    <input type="file" id="newPersonPhoto" accept="image/*" class="w-full text-xs bg-white p-2 border border-slate-400 rounded-lg" onchange="previewNewPersonPhoto(this)">
-                    <div id="newPersonPhotoPreviewContainer" class="hidden mt-2 flex justify-center">
-                        <img id="newPersonPhotoPreview" src="" class="w-20 h-20 object-cover rounded-full border-2 border-yellow-400 shadow-md">
-                    </div>
                 </div>
                 <button id="addPersonSubmitBtn" onclick="handleAddPerson()" class="w-full bg-slate-900 text-yellow-400 p-3.5 rounded-lg font-bold uppercase shadow-lg hover:bg-black transition-all">Salvar</button>
                 <button onclick="closeModal('addPersonModal')" class="w-full text-slate-500 text-xs py-2">Cancelar</button>
@@ -313,6 +318,7 @@
         let isAdmin = false;
         let selectedItem = null;
         let availableColumns = [];
+        let newPersonPhotoData = null;
 
         const DEFAULT_PHOTO = 'data:image/svg+xml;charset=UTF-8,%3csvg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="%23facc15"%3e%3cpath stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /%3e%3cpath stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /%3e%3c/svg%3e';
 
@@ -599,32 +605,39 @@
         function openAddPersonModal() {
             document.getElementById('newPersonName').value = '';
             document.getElementById('newPersonId').value = '';
-            const photoInput = document.getElementById('newPersonPhoto');
-            if (photoInput) photoInput.value = '';
-            const previewContainer = document.getElementById('newPersonPhotoPreviewContainer');
-            if (previewContainer) previewContainer.classList.add('hidden');
+            newPersonPhotoData = null;
+            const photoEl = document.getElementById('newPersonPhoto');
+            photoEl.src = DEFAULT_PHOTO;
+            photoEl.classList.add('p-10');
             document.getElementById('addPersonModal').classList.remove('hidden');
         }
 
-        function previewNewPersonPhoto(input) {
-            const previewContainer = document.getElementById('newPersonPhotoPreviewContainer');
-            const previewImg = document.getElementById('newPersonPhotoPreview');
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    previewImg.src = e.target.result;
-                    previewContainer.classList.remove('hidden');
-                };
-                reader.readAsDataURL(input.files[0]);
+        function setNewPersonPhotoData(base64) {
+            newPersonPhotoData = base64;
+            const photoEl = document.getElementById('newPersonPhoto');
+            if (base64) {
+                photoEl.src = base64;
+                photoEl.classList.remove('p-10');
             } else {
-                previewContainer.classList.add('hidden');
+                photoEl.src = DEFAULT_PHOTO;
+                photoEl.classList.add('p-10');
             }
+        }
+
+        function removeNewPersonPhoto() {
+            setNewPersonPhotoData(null);
+        }
+
+        function handleNewPersonPhotoUpload(input) {
+            if (!input.files || !input.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = (e) => setNewPersonPhotoData(e.target.result);
+            reader.readAsDataURL(input.files[0]);
         }
 
         async function handleAddPerson() {
             const nameInput = document.getElementById('newPersonName').value.trim();
             const idInput = document.getElementById('newPersonId').value.trim();
-            const photoInput = document.getElementById('newPersonPhoto');
             const btn = document.getElementById('addPersonSubmitBtn');
 
             if (!nameInput || !idInput) {
@@ -634,20 +647,6 @@
 
             btn.disabled = true;
             btn.textContent = "SALVANDO...";
-
-            let photoBase64 = null;
-            if (photoInput && photoInput.files && photoInput.files[0]) {
-                try {
-                    photoBase64 = await new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onload = (e) => resolve(e.target.result);
-                        reader.onerror = (e) => reject(e);
-                        reader.readAsDataURL(photoInput.files[0]);
-                    });
-                } catch (err) {
-                    console.error("Erro ao ler foto:", err);
-                }
-            }
 
             const hasCategoria = availableColumns.includes('categoria');
             const hasColunaD = availableColumns.includes('coluna_d');
@@ -659,7 +658,7 @@
                 data_criacao: new Date().toISOString()
             };
 
-            if (photoBase64) newRecord.coluna_c = photoBase64;
+            if (newPersonPhotoData) newRecord.coluna_c = newPersonPhotoData;
             if (hasColunaD) newRecord.coluna_d = "";
             if (hasCategoria) newRecord.categoria = 'NORMAL';
 
@@ -743,14 +742,25 @@
         }
 
         window.addEventListener('paste', async (e) => {
-            if (!isAdmin || document.getElementById('detailsModal').classList.contains('hidden')) return;
+            if (!isAdmin) return;
+
+            const detailsModalVisible = !document.getElementById('detailsModal').classList.contains('hidden');
+            const addPersonModalVisible = !document.getElementById('addPersonModal').classList.contains('hidden');
+
+            if (!detailsModalVisible && !addPersonModalVisible) return;
 
             const items = e.clipboardData.items;
             for (let i = 0; i < items.length; i++) {
                 if (items[i].type.indexOf('image') !== -1) {
                     const blob = items[i].getAsFile();
                     const reader = new FileReader();
-                    reader.onload = async (event) => await savePhoto(event.target.result);
+                    reader.onload = async (event) => {
+                        if (addPersonModalVisible) {
+                            setNewPersonPhotoData(event.target.result);
+                        } else if (detailsModalVisible) {
+                            await savePhoto(event.target.result);
+                        }
+                    };
                     reader.readAsDataURL(blob);
                     break;
                 }
