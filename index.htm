@@ -239,8 +239,12 @@
             </div>
             <div class="space-y-4">
                 <div>
-                    <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Nome Completo *</label>
-                    <input type="text" id="newPersonName" class="w-full p-3 border border-slate-400 rounded-lg outline-none focus:border-yellow-400 text-slate-900 font-medium" placeholder="Ex: João da Silva">
+                    <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Nome *</label>
+                    <input type="text" id="newPersonName" class="w-full p-3 border border-slate-400 rounded-lg outline-none focus:border-yellow-400 text-slate-900 font-medium" placeholder="Ex: João">
+                </div>
+                <div>
+                    <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Sobrenome</label>
+                    <input type="text" id="newPersonLastName" class="w-full p-3 border border-slate-400 rounded-lg outline-none focus:border-yellow-400 text-slate-900 font-medium" placeholder="Ex: Silva">
                 </div>
                 <div>
                     <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">ID Pessoal *</label>
@@ -604,6 +608,7 @@
 
         function openAddPersonModal() {
             document.getElementById('newPersonName').value = '';
+            document.getElementById('newPersonLastName').value = '';
             document.getElementById('newPersonId').value = '';
             newPersonPhotoData = null;
             const photoEl = document.getElementById('newPersonPhoto');
@@ -637,6 +642,7 @@
 
         async function handleAddPerson() {
             const nameInput = document.getElementById('newPersonName').value.trim();
+            const lastNameInput = document.getElementById('newPersonLastName').value.trim();
             const idInput = document.getElementById('newPersonId').value.trim();
             const btn = document.getElementById('addPersonSubmitBtn');
 
@@ -659,7 +665,7 @@
             };
 
             if (newPersonPhotoData) newRecord.coluna_c = newPersonPhotoData;
-            if (hasColunaD) newRecord.coluna_d = "";
+            if (hasColunaD) newRecord.coluna_d = lastNameInput;
             if (hasCategoria) newRecord.categoria = 'NORMAL';
 
             const { error } = await supabaseClient
