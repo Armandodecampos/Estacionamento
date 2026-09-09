@@ -234,6 +234,13 @@
                     <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">ID Pessoal *</label>
                     <input type="text" id="newPersonId" class="w-full p-3 border border-slate-400 rounded-lg outline-none focus:border-yellow-400 text-slate-900 font-mono font-bold" placeholder="Ex: 123456">
                 </div>
+                <div>
+                    <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Foto (Opcional)</label>
+                    <input type="file" id="newPersonPhoto" accept="image/*" class="w-full text-xs bg-white p-2 border border-slate-400 rounded-lg" onchange="previewNewPersonPhoto(this)">
+                    <div id="newPersonPhotoPreviewContainer" class="hidden mt-2 flex justify-center">
+                        <img id="newPersonPhotoPreview" src="" class="w-20 h-20 object-cover rounded-full border-2 border-yellow-400 shadow-md">
+                    </div>
+                </div>
                 <button id="addPersonSubmitBtn" onclick="handleAddPerson()" class="w-full bg-slate-900 text-yellow-400 p-3.5 rounded-lg font-bold uppercase shadow-lg hover:bg-black transition-all">Salvar</button>
                 <button onclick="closeModal('addPersonModal')" class="w-full text-slate-500 text-xs py-2">Cancelar</button>
             </div>
@@ -592,12 +599,32 @@
         function openAddPersonModal() {
             document.getElementById('newPersonName').value = '';
             document.getElementById('newPersonId').value = '';
+            const photoInput = document.getElementById('newPersonPhoto');
+            if (photoInput) photoInput.value = '';
+            const previewContainer = document.getElementById('newPersonPhotoPreviewContainer');
+            if (previewContainer) previewContainer.classList.add('hidden');
             document.getElementById('addPersonModal').classList.remove('hidden');
+        }
+
+        function previewNewPersonPhoto(input) {
+            const previewContainer = document.getElementById('newPersonPhotoPreviewContainer');
+            const previewImg = document.getElementById('newPersonPhotoPreview');
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    previewContainer.classList.remove('hidden');
+                };
+                reader.readAsDataURL(input.files[0]);
+            } else {
+                previewContainer.classList.add('hidden');
+            }
         }
 
         async function handleAddPerson() {
             const nameInput = document.getElementById('newPersonName').value.trim();
             const idInput = document.getElementById('newPersonId').value.trim();
+            const photoInput = document.getElementById('newPersonPhoto');
             const btn = document.getElementById('addPersonSubmitBtn');
 
             if (!nameInput || !idInput) {
@@ -607,6 +634,20 @@
 
             btn.disabled = true;
             btn.textContent = "SALVANDO...";
+
+            let photoBase64 = null;
+            if (photoInput && photoInput.files && photoInput.files[0]) {
+                try {
+                    photoBase64 = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => resolve(e.target.result);
+                        reader.onerror = (e) => reject(e);
+                        reader.readAsDataURL(photoInput.files[0]);
+                    });
+                } catch (err) {
+                    console.error("Erro ao ler foto:", err);
+                }
+            }
 
             const hasCategoria = availableColumns.includes('categoria');
             const hasColunaD = availableColumns.includes('coluna_d');
@@ -618,6 +659,7 @@
                 data_criacao: new Date().toISOString()
             };
 
+            if (photoBase64) newRecord.coluna_c = photoBase64;
             if (hasColunaD) newRecord.coluna_d = "";
             if (hasCategoria) newRecord.categoria = 'NORMAL';
 
